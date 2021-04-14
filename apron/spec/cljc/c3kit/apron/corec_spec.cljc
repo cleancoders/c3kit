@@ -34,4 +34,56 @@
 
     )
 
+  (it "new-uuid"
+    (should= 10 (->> (repeatedly ccc/new-uuid)
+                     (take 10)
+                     set
+                     count)))
+
+  (it "conjv"
+    (let [result (ccc/conjv (list 1 2 3) 4)]
+      (should= [1 2 3 4] result)
+      (should= true (vector? result))))
+
+  (it "concatv"
+    (let [result (ccc/concatv (list 1 2 3) (list 4))]
+      (should= [1 2 3 4] result)
+      (should= true (vector? result))))
+
+  (it "dissocv"
+    (let [result (ccc/dissocv [1 2 3] 1)]
+      (should= [1 3] result)
+      (should= true (vector? result))))
+
+  (it "assocv"
+    (let [result (ccc/assocv [1 2 3] 1 :foo)]
+      (should= [1 :foo 2 3] result)
+      (should= true (vector? result))))
+
+  (it "removev"
+    (let [result (ccc/removev even? (list 1 2 3 4))]
+      (should= [1 3] result)
+      (should= true (vector? result))))
+
+  (it "removev="
+    (let [result (ccc/removev= (list 1 2 3 4) 2)]
+      (should= [1 3 4] result)
+      (should= true (vector? result))))
+
+  (it "->edn"
+    (should= "[1 2 3]" (ccc/->edn [1 2 3])))
+
+  (it "<-edn"
+    (should= [1 2 3] (ccc/<-edn "[1 2 3]")))
+
+  (it "formats"
+    (should= "Number 9" (ccc/formats "Number %s" 9)))
+
+  (it "remove-nils"
+    (should= {:a 1} (ccc/remove-nils {:a 1 :b nil})))
+
+  (it "ex?"
+    (should= false (ccc/ex? "Not an exception"))
+    (should= true (ccc/ex? #?(:clj (Exception. "yup") :cljs (js/Error. "yup")))))
+
   )

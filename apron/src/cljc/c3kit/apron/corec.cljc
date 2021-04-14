@@ -34,8 +34,8 @@
 ;
 ;;; Use to obfuscate database ids.  Passing to/from client/server using fns below.
 ;;; DO NOT CHANGE THESE VALUES, else ephemeral data will be invalidated (sessions, page state, etc)
-;(def hashid-salt "how about a game of poker")
-;(def hashid-min-length 10) ;; with default alphabet (62 chars), hashids of length 10 should give 8x10e17 possibilities
+;(def hashid-salt "blah blah")
+;(def hashid-min-length 99) ;; with default alphabet (62 chars), hashids of length 10 should give 8x10e17 possibilities
 ;
 ;#?(:clj  (def hash-opts {:salt hashid-salt :min-length hashid-min-length})
 ;   :cljs (def hasher (js/Hashids. hashid-salt hashid-min-length)))
@@ -59,17 +59,25 @@
   #?(:clj  (UUID/randomUUID)
      :cljs (random-uuid)))
 
-(defn conjv [col item]
+(defn conjv
   "ensures the seq is a vector before conj-ing"
+  [col item]
   (conj (vec col) item))
 
-(defn concatv [& cols]
+(defn concatv
   "ensures the seq is a vector after concat-ing"
+  [& cols]
   (vec (apply concat cols)))
 
-(defn dissocv [col i]
+(defn dissocv
   "removes the item at index i from the vector"
+  [col i]
   (vec (concat (subvec col 0 i) (subvec col (inc i)))))
+
+(defn assocv
+  "insert elem into vector at index "
+  [coll i elem]
+  (vec (concat (subvec coll 0 i) [elem] (subvec coll i))))
 
 (defn removev [pred col]
   "core/remove returning a vector"
@@ -78,16 +86,6 @@
 (defn removev= [col item]
   "Using =, returns vector without item"
   (removev #(= % item) col))
-
-(defn vec-remove
-  "remove elem in coll"
-  [pos coll]
-  (vec (concat (subvec coll 0 pos) (subvec coll (inc pos)))))
-
-(defn vec-insert
-  "remove elem in coll"
-  [pos elem coll]
-  (vec (concat (subvec coll 0 pos) [elem] (subvec coll pos))))
 
 (defn ->inspect
   "Insert in threading macro to print the value."
@@ -105,6 +103,40 @@
     (map? (first options)) (merge (first options) (apply hash-map (rest options)))
     :else (apply hash-map options)))
 
+(defn ->edn
+  "Convenience.  Convert the form to EDN"
+  [v] (if v (pr-str v) nil))
+
+(defn <-edn
+  "Convenience.  Convert the EDN string to a Clojure form"
+  [s] (edn/read-string s))
+
+(defn formats
+  "Platform agnostic string format fm"
+  [format & args]
+  #?(:clj  (apply clojure.core/format format args)
+     :cljs (apply gstring/format format args)))
+
+(defn remove-nils
+  "Return a map where all the keys with nil values are removed"
+  [e]
+  (reduce (fn [r [k v]] (if (= nil v) r (assoc r k v))) {} e))
+
+(defn ex?
+  "Returns true is e is an exception/error for the running platform"
+  [e]
+  #?(:clj  (instance? Exception e)
+     :cljs (instance? js/Error e)))
+
+(defn noop
+  "Does nothing"
+  [& _])
+
+(defn index-by-id
+  "Give a list of entities with unique :id's, return a map with the ids as keys and the entities as values"
+  [entities]
+  (reduce #(assoc %1 (:id %2) %2) {} entities))
+
 (defn keywordize-kind
   "Makes sure and entity has the keyword as the value of :kind"
   [entity]
@@ -114,21 +146,3 @@
       (string? kind) (assoc entity :kind (keyword kind))
       :else (throw (ex-info "Invalid :kind type" entity)))
     (throw (ex-info "Missing :kind" entity))))
-
-(defn ->edn [v] (if v (pr-str v) nil))
-(defn <-edn [s] (edn/read-string s))
-
-(defn formats [format & args]
-  #?(:clj  (apply clojure.core/format format args)
-     :cljs (apply gstring/format format args)))
-
-(defn remove-nils [e]
-  (reduce (fn [r [k v]] (if (= nil v) r (assoc r k v))) {} e))
-
-(defn ex? [e]
-  #?(:clj  (instance? Exception e)
-     :cljs (instance? js/Error e)))
-
-(defn noop [& _])
-
-(defn index-by-id [entities] (reduce #(assoc %1 (:id %2) %2) {} entities))
