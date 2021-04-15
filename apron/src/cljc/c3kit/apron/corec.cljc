@@ -3,57 +3,15 @@
   Clients should be able to safely :refer :all from this namespace."
   #?(:clj (:import (java.util UUID)))
   #?(:cljs (:require-macros [c3kit.apron.corec :refer [for-all]]))
-  (:require
-    [clojure.edn :as edn]
+  #?(:cljs (:require
     ;#?(:clj [hashids.core :as hashid])
     ;#?(:cljs [cljsjs.hashids])
-    #?(:cljs [goog.string :as gstring])
-    #?(:cljs [goog.string.format])
-    ))
+    [goog.string :as gstring]
+    [goog.string.format]
+    )))
 
 #?(:clj (defmacro for-all [bindings body]
           `(doall (for ~bindings ~body))))
-
-;; ----- hashids (https://hashids.org/) --------------------------------------------------------------------------------
-
-;(defn- -id->hash [conf id]
-;  (when id
-;    #?(:clj  (hashid/encode conf id)
-;       :cljs (.encode conf id))))
-;
-;(defn- -hash->id [conf hash]
-;  (when (and hash (string? hash) (not= "" hash))
-;    #?(:clj  (first (hashid/decode conf hash))
-;       :cljs (first (.decode conf hash)))))
-;
-;(defn hashid-fns [salt min-length]
-;  (let [conf #?(:clj {:salt salt :min-length min-length}
-;                :cljs (js/Hashids. salt min-length))]
-;    {:id->hash (fn [id] (-id->hash conf id))
-;     :hash->id (fn [hash] (-hash->id conf hash))}))
-;
-;;; Use to obfuscate database ids.  Passing to/from client/server using fns below.
-;;; DO NOT CHANGE THESE VALUES, else ephemeral data will be invalidated (sessions, page state, etc)
-;(def hashid-salt "blah blah")
-;(def hashid-min-length 99) ;; with default alphabet (62 chars), hashids of length 10 should give 8x10e17 possibilities
-;
-;#?(:clj  (def hash-opts {:salt hashid-salt :min-length hashid-min-length})
-;   :cljs (def hasher (js/Hashids. hashid-salt hashid-min-length)))
-;
-;(def hashid-configured-fns (hashid-fns hashid-salt hashid-min-length))
-;(def id->hash (:id->hash hashid-configured-fns))
-;(def hash->id (:hash->id hashid-configured-fns))
-;
-;(defn hashid [entity] (id->hash (:id entity)))
-;
-;(defn ->hashid [thing]
-;  (cond (number? thing) (id->hash thing)
-;        (string? thing) thing
-;        (nil? thing) thing
-;        (map? thing) (hashid thing)
-;        :else thing))
-
-;; ^^^^ hashids ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 (defn new-uuid []
   #?(:clj  (UUID/randomUUID)
@@ -103,13 +61,6 @@
     (map? (first options)) (merge (first options) (apply hash-map (rest options)))
     :else (apply hash-map options)))
 
-(defn ->edn
-  "Convenience.  Convert the form to EDN"
-  [v] (if v (pr-str v) nil))
-
-(defn <-edn
-  "Convenience.  Convert the EDN string to a Clojure form"
-  [s] (edn/read-string s))
 
 (defn formats
   "Platform agnostic string format fm"
@@ -131,18 +82,3 @@
 (defn noop
   "Does nothing"
   [& _])
-
-(defn index-by-id
-  "Give a list of entities with unique :id's, return a map with the ids as keys and the entities as values"
-  [entities]
-  (reduce #(assoc %1 (:id %2) %2) {} entities))
-
-(defn keywordize-kind
-  "Makes sure and entity has the keyword as the value of :kind"
-  [entity]
-  (if-let [kind (:kind entity)]
-    (cond
-      (keyword? kind) entity
-      (string? kind) (assoc entity :kind (keyword kind))
-      :else (throw (ex-info "Invalid :kind type" entity)))
-    (throw (ex-info "Missing :kind" entity))))

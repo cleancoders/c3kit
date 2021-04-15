@@ -2,9 +2,9 @@
   (:import [java.security MessageDigest DigestInputStream]
            (java.io InputStream OutputStream))
   (:require
+    [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
-;     [poker.config :as config]
     ))
 
 (defn files-in
@@ -19,7 +19,9 @@
          (pred name) (recur pred base more (conj result (str base "/" name)))
          :else (recur pred base more result))))))
 
-(defn clj-files-in [path]
+(defn clj-files-in
+  "Return a list of filenames of .clj files located within the specified path, recursively"
+  [path]
   (files-in #(.endsWith % ".clj") path))
 
 (defn filename->ns [filename]
@@ -35,16 +37,11 @@
     (when (not (.exists parent))
       (.mkdirs parent))))
 
-;(defn load-namespace [name]
-;  (try
-;    (let [ns-sym (symbol name)]
-;      (require [ns-sym :reload true])
-;      (the-ns ns-sym))
-;    (catch Error e
-;      (println "Failed to load ns:" name)
-;      (println e))))
-
-(defn resolve-var [var-sym]
+(defn resolve-var
+  "Given the symbol of a fully qualified var name, load the namespace and return the var.
+  Throws an exception if the var doesnt exist.  Deref the var to get it's value.
+  Use to decouple code; dynamically load code."
+  [var-sym]
   (let [ns-sym (symbol (namespace var-sym))
         var-sym (symbol (name var-sym))]
     (require ns-sym)
@@ -52,17 +49,14 @@
       var
       (throw (Exception. (str "No such var " (name ns-sym) "/" (name var-sym)))))))
 
-(defn resolve-var-or-nil [var-sym]
+(defn resolve-var-or-nil
+  "Same as resolve-var except that it returns nil if the var doesn't exist"
+  [var-sym]
   (try
     (resolve-var var-sym)
     (catch Exception e
       ;(log/error e)
       nil)))
-
-; (def dev-only-refresh
-;   (if config/development?
-;     @(resolve-var 'poker.refresh/refresh!)
-;     (fn [])))
 
 (defn md5 [^String s]
   (let [alg (MessageDigest/getInstance "md5")
@@ -77,10 +71,32 @@
     (io/copy dis null-output-stream)
     (format "%032x" (BigInteger. 1 (.digest alg)))))
 
-;(defn schema->db-schema [schema]
-;  (if-let [enum (:enum schema)]
-;    (db/build-enum-schema enum (schema/db-schema schema))
-;    (let [kind (get-in schema [:kind :value])]
-;      (assert kind (str "kind missing: " schema))
-;      (assert (keyword? kind) (str "kind must be keyword: " kind))
-;      (db/build-schema kind (schema/db-schema schema)))))
+(defn ->edn
+  "Convenience.  Convert the form to EDN"
+  [v] (if v (pr-str v) nil))
+
+(defn <-edn
+  "Convenience.  Convert the EDN string to a Clojure form"
+  [s] (edn/read-string s))
+
+(defn read-edn-resource
+  "Find file in classpath, read as EDN, and return form."
+  [path]
+  (if-let [result (io/resource path)]
+    (<-edn (slurp result))
+    (throw (ex-info (str "Failed to read edn resource: " path) {:path path}))))
+
+(defn index-by-id
+  "Give a list of entities with unique :id's, return a map with the ids as keys and the entities as values"
+  [entities]
+  (reduce #(assoc %1 (:id %2) %2) {} entities))
+
+(defn keywordize-kind
+  "Makes sure and entity has the keyword as the value of :kind"
+  [entity]
+  (if-let [kind (:kind entity)]
+    (cond
+      (keyword? kind) entity
+      (string? kind) (assoc entity :kind (keyword kind))
+      :else (throw (ex-info "Invalid :kind type" entity)))
+    (throw (ex-info "Missing :kind" entity))))

@@ -1,10 +1,10 @@
-(ns c3kit.apron.cljs
+(ns c3kit.scaffold.cljs
   (:import (cljs.closure Inputs Compilable))
   (:require [cljs.build.api :as api]
             [clojure.java.io :as io]
             [c3kit.apron.util :as util]
             [c3kit.apron.app :as app]
-            [c3kit.apron.config :as config]))
+            ))
 
 (def build-config (atom nil))
 
@@ -22,51 +22,6 @@
   ;; MDM - Touch the js output file so the browser will reload it without hard refresh.
   (.setLastModified (io/file (:output-to @build-config)) (System/currentTimeMillis))
   (run-specs true))
-
-
-;(def options
-;  {
-;   :development {:cache-analysis true
-;                 :libs           ["src/js/"]
-;                 :optimizations  :none
-;                 :output-dir     "resources/public/cljs/"
-;                 :output-to      "resources/public/cljs/cleancoders_dev.js"
-;                 :pretty-print   true
-;                 :source-map     true
-;                 :sources        ["spec/cljc" "spec/cljs" "src/cljc" "src/cljs"]
-;                 :specs          true
-;                 :verbose        false
-;                 :watch-fn       after-dev-compile
-;                 }
-;   :production  {
-;                 :cache-analysis false
-;                 :externs        ["dev/cleancoders/externs/youtube.js"
-;                                  "dev/cleancoders/externs/gapi.js"]
-;                 :infer-externs  true
-;                 :libs           ["src/js/"]
-;                 :optimizations  :advanced
-;                 :output-dir     "resources/public/cljs/"
-;                 :output-to      "resources/public/cljs/cleancoders.js"
-;                 :pretty-print   false
-;                 ;:pretty-print   true
-;                 ;:pseudo-names   true
-;                 :sources        ["src/cljc" "src/cljs"]
-;                 :specs          false
-;                 :verbose        false
-;                 }
-;   :staging     {
-;                 :cache-analysis false
-;                 :infer-externs  true
-;                 :libs           ["src/js/"]
-;                 :optimizations  :whitespace
-;                 :output-dir     "resources/public/cljs/"
-;                 :output-to      "resources/public/cljs/cleancoders.js"
-;                 :pretty-print   true
-;                 :pseudo-names   true
-;                 :sources        ["src/cljc" "src/cljs"]
-;                 :specs          false
-;                 :verbose        false
-;                 }})
 
 (deftype Sources [build-options]
   Inputs
@@ -86,13 +41,13 @@
   (if-let [watch-fn-sym (:watch-fn options)]
     (do
       (when-not (symbol? watch-fn-sym) (throw (Exception. ":watch-fn must be a fully qualified symbol")))
-      (assoc options :watch-fn (app/resolve-var watch-fn-sym)))
+      (assoc options :watch-fn (util/resolve-var watch-fn-sym)))
     options))
 
 (defn -main [& args]
   ;; usage:  lein run -m cleancoders.cljs [auto (default)|once] [env (development)]
   (let [once-or-auto (or (first args) "auto")
-        config (config/read-config "cljs.edn")
+        config (util/read-edn-resource "cljs.edn")
         build-key (keyword (or (second args) (app/find-env (or (:env-keys config) app/env-keys))))]
     (reset! build-config (resolve-watch-fn (get config build-key)))
     (assert (#{"once" "auto"} once-or-auto) (str "Unrecognized build frequency: " once-or-auto ". Must be 'once' or 'auto'"))

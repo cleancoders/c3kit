@@ -20,11 +20,6 @@
   ;    (should= "jREgpG5GpaB" (ccc/id->hash 999999999999999))
   ;    (should= 999999999999999 (ccc/hash->id "jREgpG5GpaB")))
 
-  (it "keywordize kind"
-    (should= {:kind :foo :val 1} (ccc/keywordize-kind {:kind "foo" :val 1}))
-    (should= {:kind :foo :val 1} (ccc/keywordize-kind {:kind :foo :val 1}))
-    (should-throw (ccc/keywordize-kind {:missing "kind"}))
-    (should-throw (ccc/keywordize-kind {:kind 123})))
 
   (context "->options"
 
@@ -69,12 +64,6 @@
     (let [result (ccc/removev= (list 1 2 3 4) 2)]
       (should= [1 3 4] result)
       (should= true (vector? result))))
-
-  (it "->edn"
-    (should= "[1 2 3]" (ccc/->edn [1 2 3])))
-
-  (it "<-edn"
-    (should= [1 2 3] (ccc/<-edn "[1 2 3]")))
 
   (it "formats"
     (should= "Number 9" (ccc/formats "Number %s" 9)))

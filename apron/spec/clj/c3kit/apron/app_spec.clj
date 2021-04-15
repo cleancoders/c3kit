@@ -4,13 +4,10 @@
     [speclj.core :refer :all]
     ))
 
-(def foo "Foo")
 (defonce bar (app/resolution :bar))
 
 (describe "App"
 
-  (it "resolve-var"
-    (should= "Foo" (deref (app/resolve-var 'c3kit.apron.app-spec/foo))))
 
   (it "resolution - missing"
     (alter-var-root #'app/app dissoc :bar)

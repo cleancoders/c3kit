@@ -1,24 +1,13 @@
 (ns c3kit.apron.app
   (:import (clojure.lang IDeref))
   (:require
-    [c3kit.apron.log :as log]))
+    [c3kit.apron.log :as log]
+    [c3kit.apron.util :as util]))
 
 ;; MDM - This file should never change mid-process. Therefore is has no reason to reload (wrap-refresh).
 ;; Application objects that should persist through reloads, like the database connection,
 ;; can be stored here. The resolution fn offers convenience to retrieve the app values.
 (defonce app {:api-version "no-api-version"})
-
-(defn resolve-var
-  "Given the symbol of a fully qualified var name, load the namespace and return the var.
-  Throws an exception if the var doesnt exist.  Deref the var to get it's value.
-  Use to decouple code; dynamically load code."
-  [var-sym]
-  (let [ns-sym (symbol (namespace var-sym))
-        var-sym (symbol (name var-sym))]
-    (require ns-sym)
-    (if-let [var (ns-resolve (the-ns ns-sym) var-sym)]
-      var
-      (throw (Exception. (str "No such var " (name ns-sym) "/" (name var-sym)))))))
 
 (defn resolution
   "Returns a deref-able pointer to values stored in app.
@@ -44,12 +33,12 @@
 
 (defn- start-service! [service]
   (when-let [start-fn-sym (:start service)]
-    (when-let [start-fn (resolve-var start-fn-sym)]
+    (when-let [start-fn (util/resolve-var start-fn-sym)]
       (alter-var-root #'app start-fn))))
 
 (defn- stop-service! [service]
   (when-let [stop-fn-sym (:stop service)]
-    (when-let [stop-fn (resolve-var stop-fn-sym)]
+    (when-let [stop-fn (util/resolve-var stop-fn-sym)]
       (alter-var-root #'app stop-fn))))
 
 (defn start! [services]
@@ -84,6 +73,14 @@
 (defn set-env! [env] (alter-var-root #'app assoc :env env))
 
 (def env (resolution :env))
+
+(defn development?
+  "Return true if env resolves to 'development'"
+  [] (= "development" @env))
+
+(defn production?
+  "Return true if env resolves to 'production'"
+  [] (= "production" @env))
 
 
 
