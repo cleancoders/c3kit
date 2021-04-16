@@ -1,0 +1,385 @@
+(ns c3kit.bucket.db
+  (:refer-clojure :exclude [update])
+  (:require
+    [c3kit.apron.app :as app]
+    [c3kit.apron.corec :as ccc]
+    [c3kit.apron.log :as log]
+    [c3kit.apron.util :as util]
+    [c3kit.bucket.dbc :as dbc]
+    [clojure.set :as set]
+    [clojure.string :as str]
+    [datomic.api :as api]
+    ))
+
+(defn connect [uri]
+  (api/create-database uri)
+  (api/connect uri))
+
+(defn start [app]
+  (let [config (util/read-edn-resource "datomic.edn")
+        uri (:uri config)]
+    (log/info "Connecting to datomic at: " uri)
+    (assoc app :datomic-connection (connect uri))))
+
+(defn stop [app]
+  (log/info "Connection to datomic discarded")
+  (dissoc app :datomic-connection))
+
+(defonce connection (app/resolution! :datomic-connection))
+
+(defn partition-schema
+  "Return transact-able form to add a partition with name"
+  [partition-name]
+  [{:db/id (name partition-name) :db/ident (keyword partition-name)}
+   [:db/add :db.part/db :db.install/partition (name partition-name)]])
+
+(defn- apply-uniqueness [schema options]
+  (if (:unique-value options)
+    (assoc schema :db/unique :db.unique/value)
+    (if (:unique-identity options)
+      (assoc schema :db/unique :db.unique/identity)
+      schema)))
+
+(defn build-attribute [kind [attr-name type & spec]]
+  (let [options (set spec)
+        type (if (= :kw-ref type) :ref type)]
+    (->
+      {
+       :db/ident       (keyword (name kind) (name attr-name))
+       :db/valueType   (keyword "db.type" (name type))
+       :db/cardinality (if (contains? options :many) :db.cardinality/many :db.cardinality/one)
+       :db/index       (if (:index options) true false)
+       :db/isComponent (if (:component options) true false)
+       :db/noHistory   (if (:no-history options) true false)
+       :db/fulltext    (if (:fulltext options) true false)
+       }
+      (apply-uniqueness options))))
+
+(defn build-schema [kind attribute-specs]
+  (vec (map #(build-attribute kind %) attribute-specs)))
+
+(defn build-enum-schema [enum values]
+  (mapv (fn [val] {:db/ident (keyword (name enum) (name val))}) values))
+
+(defn db [] (api/db @connection))
+
+(defn db-as-of [t] (api/as-of (db) t))
+
+(defn scope-attributes [scope attributes]
+  (into {}
+        (map
+          (fn [[k v]] [(keyword (name scope) (name k)) v])
+          attributes)))
+
+(defn transact!
+  ([transaction] (transact! transaction @connection))
+  ([transaction connection]
+   (api/transact connection transaction)))
+
+(defn value-or-id [v]
+  (if (and (instance? datomic.query.EntityMap v) (contains? v :db/id))
+    (:db/id v)
+    v))
+
+(defn attributes->entity
+  ([attributes id]
+   (when (seq attributes)
+     (let [kind (namespace (first (first attributes)))]
+       (attributes->entity attributes id kind))))
+  ([attributes id kind]
+   (into {:id id :kind (keyword kind)}
+         (map
+           (fn [[k v]]
+             [(keyword (name k))
+              (if (set? v)
+                (set (map value-or-id v))
+                (value-or-id v))])
+           attributes))))
+
+(defn entity [id]
+  (cond
+    (number? id) (when-let [attributes (seq (api/entity (api/db @connection) id))]
+                   (attributes->entity attributes id))
+    (nil? id) nil
+    (string? id) (when-not (str/blank? id) (entity (Long/parseLong id)))
+    :else (attributes->entity (seq id) (:db/id id))))
+
+(defn entity! [id] (dbc/entity! (entity id) id))
+(defn entity-of-kind! [kind id] (dbc/entity-of-kind! (entity id) kind id))
+(defn entity-of-kind [kind id] (dbc/entity-of-kind (entity id) kind))
+(defn reload [e] (when-let [id (:id e)] (entity id)))
+
+(defn q->entities [result]
+  (map #(-> % first entity) result))
+
+(defn- id-or-val [thing] (or (:db/id thing) thing))
+
+(defn dissoc-nils [entity]
+  (apply dissoc entity (filter #(= nil (get entity %)) (keys entity))))
+
+(defn- kind! [entity]
+  (or (:kind entity)
+      (throw (Exception. (str ":kind missing for " entity)))))
+
+(defn tempid [] (api/tempid :poker))
+(def tempid? (comp (fnil neg? 0) :idx))
+(def squuid api/squuid)
+
+(defn insert-form [id entity]
+  (list (-> entity dissoc-nils (assoc :db/id id))))
+
+(defn- retract-field-forms [id original retracted-keys]
+  (reduce (fn [form key]
+            (let [o-val (get original key)]
+              (if (set? o-val)
+                (reduce #(conj %1 [:db/retract id key (id-or-val %2)]) form o-val)
+                (conj form [:db/retract id key (id-or-val o-val)]))))
+          [] retracted-keys))
+
+(defn- cardinality-many-retract-forms [updated original]
+  (reduce (fn [form [key val]]
+            (if (or (set? val) (sequential? val))
+              (let [id (:db/id updated)
+                    o-val (set (map id-or-val (get original key)))
+                    missing (set/difference o-val (set val))]
+                (reduce #(conj %1 [:db/retract id key (id-or-val %2)]) form missing))
+              form))
+          [] updated))
+
+(defn update-form [id updated]
+  (let [original (into {} (api/entity (api/db @connection) id))
+        retracted-keys (doall (filter #(= nil (get updated %)) (keys original)))
+        updated (-> (apply dissoc updated retracted-keys)
+                    dissoc-nils
+                    (assoc :db/id id))
+        seq-retractions (cardinality-many-retract-forms updated original)
+        field-retractions (retract-field-forms id original retracted-keys)]
+    (concat [updated] seq-retractions field-retractions)))
+
+(defn retract-form [id] (list [:db.fn/retractEntity id]))
+
+(defn tx-form [entity]
+  (if (dbc/retract? entity)
+    (if-let [id (:id entity)]
+      (list id (retract-form id))
+      (throw (Exception. "Can't retract entity without an :id")))
+    (let [kind (kind! entity)
+          id (or (:id entity) (tempid))
+          e (scope-attributes kind (dissoc entity :kind :id))]
+      (if (tempid? id)
+        (list id (insert-form id e))
+        (list id (update-form id e))))))
+
+(defn resolve-id [result id]
+  (if (tempid? id)
+    (api/resolve-tempid (:db-after result) (:tempids result) id)
+    id))
+
+(defn- tx-result [id]
+  (if-let [e (entity id)]
+    e
+    {:kind :db/retract :id id}))
+
+(defn tx
+  "Transacts (save, update, or retract) the entity.
+  Arguments, assumed to be in key-value pairs, will be merged into the entity prior to saving.
+  Retracts entity when it's metadata has :retract."
+  [& args]
+  (let [e (ccc/->options args)]
+    (when (seq e)
+      (let [[id form] (tx-form e)
+            result @(api/transact @connection form)
+            id (resolve-id result id)]
+        (tx-result id)))))
+
+(defn tx*
+  "Transact multiple entities, synchronously"
+  [entities]
+  (let [id-forms (map tx-form (remove nil? entities))
+        tx-form (mapcat second id-forms)
+        result @(api/transact @connection tx-form)
+        ids (map #(resolve-id result (first %)) id-forms)]
+    (map tx-result ids)))
+
+(defn atx*
+  "Asynchronous transact.  Returns a future containing the transacted entities.
+  Ideal for large imports or when multiple entities need to be transacted in a single transaction."
+  [entities]
+  (let [id-forms (map tx-form entities)
+        tx-form (mapcat second id-forms)
+        tx (api/transact-async @connection tx-form)]
+    (future
+      (loop [done? (future-done? tx)]
+        (if done?
+          (let [result @tx
+                ids (map first id-forms)]
+            (map #(entity (resolve-id result %)) ids))
+          (do
+            (Thread/yield)
+            (recur (future-done? tx))))))))
+
+(defn- ->attr-kw [kind attr] (keyword (name kind) (name attr)))
+
+(defn- where-clause [attr value]
+  (cond (nil? value) [(list 'missing? '$ '?e attr)]
+        (and (sequential? value) (= :not (first value)) (= nil (second value))) ['?e attr]
+        (and (sequential? value) (= :not (first value))) (list 'not (where-clause attr (second value)))
+        :else ['?e attr value]))
+
+(defn find-by
+  "Searches for all entities with the given attribute(s) equal to the given value(s)"
+  ([kind attr value]
+   (if (nil? value)
+     (do
+       (log/warn (str "find-by nil value (" kind " " attr "), returning empty list."))
+       (log/warn (Exception.))
+       [])
+     (q->entities
+       (api/q '[:find ?e
+                :in $ ?attribute ?value
+                :where [?e ?attribute ?value]] (db) (->attr-kw kind attr) value))))
+  ([kind attr1 val1 & pairs]
+   (assert (even? (count pairs)) "must provide key value pairs")
+   (let [pairs (partition 2 pairs)
+         attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
+         vals (cons val1 (map second pairs))]
+     (-> '[:find ?e :in $ :where]
+         (concat (map where-clause attrs vals))
+         (api/q (db))
+         q->entities))))
+
+(defn count-by
+  "Counts all entities with the given attribute(s) equal to the given value(s)"
+  [kind & pairs]
+  (assert (even? (count pairs)) "must provide key value pairs")
+  (let [pairs (partition 2 pairs)
+        attrs (map #(->attr-kw kind %) (map first pairs))
+        vals (map second pairs)]
+    (let [q '[:find (count ?e) :in $ :where]
+          q (concat q (map where-clause attrs vals))]
+      (or (ffirst (api/q q (db))) 0))))
+
+(defn ffind-by
+  "Same as (first (find-by ...))"
+  ([kind attr value] (first (find-by kind attr value)))
+  ([kind attr1 val1 attr2 val2] (first (find-by kind attr1 val1 attr2 val2)))
+  ([kind attr1 val1 attr2 val2 & pairs] (first (apply find-by kind attr1 val1 attr2 val2 pairs))))
+
+(defn q
+  "Raw datomic query and request"
+  [query & args]
+  (apply api/q query (db) args))
+
+(defn find-entities
+  "Takes a datalog query and returns realized (de-namespaced) entities."
+  [query & args]
+  (q->entities (apply q query args)))
+
+(defn count-all
+  "Attribute must be a qualified attribute name like :user/email :airport/code
+  Returns count of entities where attribute has a value."
+  ([kind] (throw (ex-info "an attribute is required when using datomic" {:kind kind})))
+  ([kind attr]
+   (or (ffirst (api/q '[:find (count ?e)
+                        :in $ ?attribute
+                        :where [?e ?attribute]] (db) (->attr-kw kind attr)))
+       0)))
+
+(defn find-all
+  "Attribute must be a qualified attribute name like :user/email :airport/code
+  Returns all entities where the value is not empty."
+  ([kind] (throw (ex-info "an attribute is required when using datomic" {:kind kind})))
+  ([kind attr]
+   (q->entities (api/q '[:find ?e
+                         :in $ ?attribute
+                         :where [?e ?attribute]] (db) (->attr-kw kind attr)))))
+
+(defn retract
+  "Basically 'deletes' an entity."
+  [id-or-entity]
+  (-> (if (number? id-or-entity) {:id id-or-entity} id-or-entity)
+      (assoc :kind :db/retract)
+      tx))
+
+(defn tx-ids [entity-id]
+  (->> (api/q
+         '[:find ?tx
+           :in $ ?e
+           :where
+           [?e _ _ ?tx _]]
+         (api/history (db)) entity-id)
+       (sort-by first)
+       (map first)))
+
+(defn entity-as-of-tx [db eid kind txid]
+  (let [tx (api/entity db txid)
+        timestamp (:db/txInstant tx)
+        attributes (api/entity (api/as-of db txid) eid)]
+    (when (seq attributes)
+      (-> attributes
+          (attributes->entity eid kind)
+          (assoc :db/tx txid :db/instant timestamp)))))
+
+(defn history [entity]
+  (let [id (:id entity)
+        kind (:kind entity)]
+    (assert id)
+    (assert kind)
+    (reduce #(conj %1 (entity-as-of-tx (db) id kind %2)) [] (tx-ids (:id entity)))))
+
+(defn excise!
+  "Remove entity from database history."
+  [id-or-e]
+  (let [id (if-let [id? (:id id-or-e)] id? id-or-e)]
+    (transact! [{:db/excise id}])))
+
+(def reserved-attr-nses #{"db" "db.alter" "db.bootstrap" "db.cardinality" "db.excise" "db.fn" "db.install"
+                          "db.lang" "db.part" "db.sys" "db.type" "db.unique" "fressian" "deleted" "garbage"})
+(defn current-schema
+  "Returns a list of all the fully qualified fields in the schema."
+  []
+  (filter #(not (reserved-attr-nses (namespace %)))
+          (map first (api/q '[:find ?ident :where [?e :db/ident ?ident]] (db)))))
+
+(defn garbage-idents
+  "Returns a list of all the idents starting with :garbage."
+  []
+  (filter #(= "garbage" (namespace %)) (map first (api/q '[:find ?ident :where [?e :db/ident ?ident]] (db)))))
+
+(def inspect-table (log/table-spec [":db/ident" 50]
+                                   [":db/id" 8]
+                                   [":db/valueType" 20]
+                                   [":db/cardinality" 22]
+                                   [":db/index" 9]
+                                   [":db/unique" 20]
+                                   [":db/fulltext" 12]))
+
+(defn inspect
+  "For use in REPL or development.
+  Prints the qualified names of all fields, alphebetically, in the schema."
+  []
+  ; sample attr
+  ;{:db/id 227, :db/ident :aircraft-model/model, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/index false}
+  (let [result (api/q '[:find ?v :where [_ :db.install/attribute ?v]] (db))
+        attrs (map #(->> % first (api/entity (db)) api/touch) result)
+        app-attrs (->> attrs
+                       (remove #(reserved-attr-nses (namespace (:db/ident %))))
+                       (sort-by #(str (:db/ident %))))]
+    (println ((:title-fn inspect-table) "cleancoders DB Attributes"))
+    (println (:header inspect-table))
+    (doseq [[attr color] (partition 2 (interleave app-attrs (cycle [40 44])))]
+      (log/color-pr (format (:format inspect-table)
+                            (:db/ident attr)
+                            (:db/id attr)
+                            (:db/valueType attr)
+                            (:db/cardinality attr)
+                            (:db/index attr)
+                            (or (:db/unique attr) "-")
+                            (or (:db/fulltext attr) "-"))
+                    color))))
+
+(defn datomic-entity [id-or-e]
+  (if-let [id (:id id-or-e)]
+    (api/entity (db) id)
+    (api/entity (db) id-or-e)))
+

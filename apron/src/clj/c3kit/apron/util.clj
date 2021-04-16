@@ -2,9 +2,9 @@
   (:import [java.security MessageDigest DigestInputStream]
            (java.io InputStream OutputStream))
   (:require
-    [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [c3kit.apron.utilc :as utilc]
     ))
 
 (defn files-in
@@ -31,7 +31,9 @@
       (str/replace "_" "-")
       (str/replace ".clj" "")))
 
-(defn establish-path [path]
+(defn establish-path
+  "Create any missing directories in path"
+  [path]
   (let [file (io/file path)
         parent (.getParentFile file)]
     (when (not (.exists parent))
@@ -58,7 +60,9 @@
       ;(log/error e)
       nil)))
 
-(defn md5 [^String s]
+(defn md5
+  "MD5 hash the string"
+  [^String s]
   (let [alg (MessageDigest/getInstance "md5")
         bytes (.getBytes s "UTF-8")]
     (format "%032x" (BigInteger. 1 (.digest alg bytes)))))
@@ -66,37 +70,16 @@
 (def null-output-stream (proxy [OutputStream] [] (write ([_]) ([_ _ _]))))
 
 (defn stream->md5 [^InputStream s]
+  "MD5 hash the input stream"
   (let [alg (MessageDigest/getInstance "md5")
         dis (DigestInputStream. s alg)]
     (io/copy dis null-output-stream)
     (format "%032x" (BigInteger. 1 (.digest alg)))))
 
-(defn ->edn
-  "Convenience.  Convert the form to EDN"
-  [v] (if v (pr-str v) nil))
-
-(defn <-edn
-  "Convenience.  Convert the EDN string to a Clojure form"
-  [s] (edn/read-string s))
-
 (defn read-edn-resource
   "Find file in classpath, read as EDN, and return form."
   [path]
   (if-let [result (io/resource path)]
-    (<-edn (slurp result))
+    (utilc/<-edn (slurp result))
     (throw (ex-info (str "Failed to read edn resource: " path) {:path path}))))
 
-(defn index-by-id
-  "Give a list of entities with unique :id's, return a map with the ids as keys and the entities as values"
-  [entities]
-  (reduce #(assoc %1 (:id %2) %2) {} entities))
-
-(defn keywordize-kind
-  "Makes sure and entity has the keyword as the value of :kind"
-  [entity]
-  (if-let [kind (:kind entity)]
-    (cond
-      (keyword? kind) entity
-      (string? kind) (assoc entity :kind (keyword kind))
-      :else (throw (ex-info "Invalid :kind type" entity)))
-    (throw (ex-info "Missing :kind" entity))))

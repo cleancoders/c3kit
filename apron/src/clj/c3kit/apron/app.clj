@@ -10,6 +10,13 @@
 (defonce app {:api-version "no-api-version"})
 
 (defn resolution
+  "Returns a deref-able pointer to values stored in app, may return nil"
+  [key]
+  (if (vector? key)
+    (reify IDeref (deref [_] (get-in app key)))
+    (reify IDeref (deref [_] (get app key)))))
+
+(defn resolution!
   "Returns a deref-able pointer to values stored in app.
   An exception is throw when app does not have a value for the key."
   [key]

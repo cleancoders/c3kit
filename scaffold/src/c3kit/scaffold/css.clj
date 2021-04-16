@@ -51,7 +51,7 @@
 
 (defn -main [& args]
   (let [once-or-auto (or (first args) "auto")
-        config (util/read-edn-resource "css.edn")]
+        config (util/read-edn-resource "config/css.edn")]
     (assert (#{"once" "auto"} once-or-auto) (str "Unrecognized build frequency: " once-or-auto ". Must be 'once' or 'auto'"))
     (util/establish-path (:output-file config))
     (println "Compiling CSS:" once-or-auto)

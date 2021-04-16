@@ -5,17 +5,25 @@
     ))
 
 (defonce bar (app/resolution :bar))
+(defonce bar! (app/resolution! :bar))
 
 (describe "App"
 
-
   (it "resolution - missing"
     (alter-var-root #'app/app dissoc :bar)
-    (should-throw Exception "Unresolved app component: :bar" @bar))
+    (should= nil @bar))
 
   (it "resolution - found"
     (alter-var-root #'app/app assoc :bar "bar")
     (should= "bar" @bar))
+
+  (it "resolution! - missing"
+    (alter-var-root #'app/app dissoc :bar)
+    (should-throw Exception "Unresolved app component: :bar" @bar!))
+
+  (it "resolution! - found"
+    (alter-var-root #'app/app assoc :bar "bar")
+    (should= "bar" @bar!))
 
   (it "find-env"
     (let [token (str (rand))]

@@ -7,7 +7,7 @@
                  [c3kit/apron "0.1.0-SNAPSHOT"]
                  [com.taoensso/timbre "4.11.0-alpha1"]
                  [garden "1.3.10"]
-                 [org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.764"]
                  [org.clojure/tools.namespace "1.0.0"]
                  ]

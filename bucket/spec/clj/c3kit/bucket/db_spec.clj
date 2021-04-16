@@ -2,9 +2,9 @@
   (:require
     [c3kit.bucket.db :as db]
     [c3kit.bucket.dbc-spec :as dbc-spec]
-    [c3kit.bucket.log :as log]
     [c3kit.bucket.spec-helper :as helper]
-    [speclj.core :refer :all]))
+    [speclj.core :refer :all]
+    ))
 
 (describe "DB"
 
@@ -20,7 +20,6 @@
           (should= :db.cardinality/one (:db/cardinality attribute))
           ;(should= :db.part/db (:db.install/_attribute attribute))
           ))
-
 
       (it "long"
         (let [attribute (db/build-attribute :foo [:names :long :many])]

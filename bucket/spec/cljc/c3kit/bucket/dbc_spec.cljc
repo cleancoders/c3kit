@@ -1,12 +1,12 @@
-(ns poker.dbc-spec
+(ns c3kit.bucket.dbc-spec
   (:require
     [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it xit should= should-contain
                                                       should-not-contain should-throw should-be-a with
                                                       should-not= before should should-not should-not-throw]]
-    [poker.db :as db]
-    [poker.log :as log]
-    [poker.schema :as s]
-    [poker.spec-helper :as helper]
+    [c3kit.bucket.db :as db]
+    [c3kit.apron.log :as log]
+    [c3kit.apron.schema :as s]
+    [c3kit.bucket.spec-helper :as helper]
     ))
 
 (def bibelot
@@ -44,8 +44,7 @@
 
   (context "CRUD"
 
-    #?(:clj  (helper/with-db-schemas [bibelot]) ;(helper/with-memory-db [bibelot])
-       :cljs (helper/with-db-schemas [bibelot]))
+    (helper/with-db-schemas [bibelot])
 
     (it "returns nil on missing id"
       (should= nil (db/entity -1))

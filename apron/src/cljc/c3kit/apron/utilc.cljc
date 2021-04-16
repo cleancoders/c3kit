@@ -1,0 +1,92 @@
+(ns c3kit.apron.utilc
+  (:refer-clojure :exclude [format])
+  #?(:clj (:import (java.util UUID)
+                   (java.io ByteArrayInputStream ByteArrayOutputStream)))
+  (:require
+    [c3kit.apron.schema :as schema]
+    [clojure.edn :as edn]
+    [clojure.string :as str]
+    [cognitect.transit :as transit]
+    ))
+
+(defn ->edn
+  "Convenience.  Convert the form to EDN"
+  [v] (if v (pr-str v) nil))
+
+(defn <-edn
+  "Convenience.  Convert the EDN string to a Clojure form"
+  [s] (edn/read-string s))
+
+(defn index-by-id
+  "Give a list of entities with unique :id's, return a map with the ids as keys and the entities as values"
+  [entities]
+  (reduce #(assoc %1 (:id %2) %2) {} entities))
+
+(defn keywordize-kind
+  "Makes sure and entity has the keyword as the value of :kind"
+  [entity]
+  (if-let [kind (:kind entity)]
+    (cond
+      (keyword? kind) entity
+      (string? kind) (assoc entity :kind (keyword kind))
+      :else (throw (ex-info "Invalid :kind type" entity)))
+    (throw (ex-info "Missing :kind" entity))))
+
+(defn ->uuid-or-nil
+  "Parse a string into a UUID or return nil if it's not a vlid UUID format"
+  [uuid-str]
+  (try (schema/->uuid uuid-str)
+       (catch #?(:clj Exception :cljs :default) _
+         nil)))
+
+; Transit ------------------------------------------------------------
+
+#?(:cljs (def transit-reader (transit/reader :json)))
+#?(:cljs (def transit-writer (transit/writer :json)))
+
+(defn ->transit
+  "Convert data into transit string"
+  [data]
+  #?(:clj  (let [baos (ByteArrayOutputStream.)
+                 writer (transit/writer baos :json)]
+             (transit/write writer data)
+             (.close baos)
+             (.toString baos))
+     :cljs (transit/write transit-writer data)))
+
+(defn <-transit
+  "Convert transit string into data"
+  [^String transit-str]
+  #?(:clj  (with-open [in (ByteArrayInputStream. (.getBytes transit-str))]
+             (transit/read (transit/reader in :json)))
+     :cljs (transit/read transit-reader transit-str)))
+
+; Transit ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+; CSV ---------------------------------------------------------------
+
+(defn- csv-maybe-quote [value]
+  (if (or (str/index-of value ",") (str/index-of value "\""))
+    (str "\"" (str/replace value "\"" "\"\"") "\"")
+    value))
+
+(defn- cell->csv [cell]
+  (-> (str cell)
+      csv-maybe-quote))
+
+(defn- row->csv [row]
+  (str/join "," (map cell->csv row)))
+
+(defn ->csv
+  "Simple CSV generator for a list of lists"
+  [rows]
+  (str/join "\r\n" (map row->csv rows)))
+
+; CSV end ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+(defn ->filename
+  "Sanatize string into valid filename"
+  ([name] (-> (str name)
+              (str/replace #"[ -]" "_")
+              (str/replace #"[',.-/\\<>:\"\\|?*\[\]]" "")))
+  ([name ext] (str (->filename name) "." ext)))

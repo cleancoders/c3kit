@@ -4,14 +4,15 @@
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojure "1.10.3"]
+                 [com.cognitect/transit-clj "1.0.324"]
+                 [com.cognitect/transit-cljs "0.8.264"]
+                 [com.taoensso/timbre "4.11.0-alpha1"]
+                 ;[com.cognitect/transit-clj "1.0.324" :exclusions [commons-codec]]
                  ]
 
   :profiles {:dev {:dependencies [
-                                  [com.taoensso/timbre "4.11.0-alpha1"]
-                                  [garden "1.3.10"]
                                   [org.clojure/clojurescript "1.10.764"]
-                                  [org.clojure/tools.namespace "1.0.0"]
                                   [speclj "3.3.2"]
                                   ]}}
 
