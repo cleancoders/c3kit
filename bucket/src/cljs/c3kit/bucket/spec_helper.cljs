@@ -3,12 +3,13 @@
   (:require
     [c3kit.bucket.db :as db]
     [c3kit.apron.legend :as legend]
+    [speclj.core]
     ))
 
 (defn with-db-schemas [schemas]
-      (let [schemas (if (sequential? schemas) (flatten schemas) [schemas])
-            schema-map (reduce #(assoc %1 (-> %2 :kind :value) %2) {} schemas)]
-           (around [it]
-             (db/clear!)
-             (with-redefs [legend/legend schema-map]
-                          (it)))))
+  (let [schemas (if (sequential? schemas) (flatten schemas) [schemas])
+        schema-map (reduce #(assoc %1 (-> %2 :kind :value) %2) {} schemas)]
+    (around [it]
+      (db/clear!)
+      (with-redefs [legend/index schema-map]
+        (it)))))

@@ -5,7 +5,7 @@
                :libs           ["src/js/"]
                :optimizations  :none
                :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_bucket_dev.js"
+               :output-to      "resources/public/cljs/c3kit_wire_dev.js"
                :pretty-print   true
                :source-map     true
                :sources        ["spec/cljc" "spec/cljs" "src/cljc" "src/cljs"]
@@ -19,7 +19,7 @@
                :libs           ["src/js/"]
                :optimizations  :advanced
                :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_bucket.js"
+               :output-to      "resources/public/cljs/c3kit_wire.js"
                :pretty-print   false
                ;:pretty-print   true
                ;:pseudo-names   true
@@ -33,7 +33,7 @@
                :libs           ["src/js/"]
                :optimizations  :whitespace
                :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_bucket.js"
+               :output-to      "resources/public/cljs/c3kit_wire.js"
                :pretty-print   true
                :pseudo-names   true
                :sources        ["src/cljc" "src/cljs"]

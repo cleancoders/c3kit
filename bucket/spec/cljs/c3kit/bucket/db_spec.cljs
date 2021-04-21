@@ -1,10 +1,10 @@
-(ns poker.db-spec
+(ns c3kit.bucket.db-spec
   (:require-macros [speclj.core :refer [describe context it should-not-be-nil should-be-nil should= should-not
                                         should-not= should-have-invoked after before with-stubs with around
                                         should-contain should-not-contain should-throw should should-not-throw]])
-  (:require [poker.db :as db]
-            [poker.dbc-spec :as dbc-spec]
-            [poker.spec-helper :as helper]))
+  (:require [c3kit.bucket.db :as db]
+            [c3kit.bucket.dbc-spec :as dbc-spec]
+            [c3kit.bucket.spec-helper :as helper]))
 
 (describe "DB"
 

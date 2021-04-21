@@ -9,7 +9,8 @@
 
 (defn init!
   [schemas]
-  (alter-var-root #'index (fn [_] schemas)))
+  #?(:clj (alter-var-root #'index (fn [_] schemas))
+     :cljs (set! index schemas)))
 
 (defn for-kind [kind]
   (or (get index kind)

@@ -1,13 +1,22 @@
 (ns c3kit.apron.legend-spec
   (:require
-    [c3kit.apron.schema :as schema]
-    [c3kit.apron.legend :as legend]
+    [c3kit.apron.schema :as s]
+    [c3kit.apron.legend :as sut]
     [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it xit should= should-contain
                                                       should-not-contain should-throw should-not-be-nil with]]))
 
 
+(def foo
+  {:kind       (s/kind :foo)
+   :id         s/id
+   :name       {:type :string}
+   :value      {:type :int }})
 
 (describe "Schema Legend"
+
+  (it "init!"
+    (sut/init! {:foo foo})
+    (should= {:foo foo} sut/index))
 
   ;(it "presents an entity contained"
   ;  (let [bob {:kind :author :name "Bob"}

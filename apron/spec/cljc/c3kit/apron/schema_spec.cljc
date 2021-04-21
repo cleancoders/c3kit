@@ -34,7 +34,7 @@
    :colors      {:type [:string]}
    :uuid        {:type :uuid
                  :db   [:unique-identity]}
-   :temperament {:type  :kw-ref}})
+   :temperament {:type :kw-ref}})
 
 (def temperaments
   {:enum   :temperament
@@ -54,23 +54,6 @@
                 :uuid     a-uuid})
 
 (describe "Schema"
-
-  (it "converts to db format"
-    (let [db-schema (schema/db-schema pet)]
-      (should-not-contain [:kind :keyword] db-schema)
-      (should-contain [:species :string] db-schema)
-      (should-contain [:birthday :instant] db-schema)
-      (should-contain [:length :float] db-schema)
-      (should-contain [:teeth :int] db-schema)
-      (should-contain [:name :string :unique-value] db-schema)
-      (should-contain [:owner :ref] db-schema)
-      (should-contain [:colors :string :many] db-schema)
-      (should-contain [:uuid :uuid :unique-identity] db-schema)
-      (should-contain [:temperament :kw-ref] db-schema)))
-
-  (it "converts emum to db format"
-    (let [enum-schema (schema/db-schema temperaments)]
-      (should= [:wild :domestic] enum-schema)))
 
   (context "coersion"
 

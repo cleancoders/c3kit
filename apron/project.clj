@@ -8,6 +8,7 @@
                  [com.cognitect/transit-clj "1.0.324"]
                  [com.cognitect/transit-cljs "0.8.264"]
                  [com.taoensso/timbre "4.11.0-alpha1"]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]
                  ;[com.cognitect/transit-clj "1.0.324" :exclusions [commons-codec]]
                  ]
 

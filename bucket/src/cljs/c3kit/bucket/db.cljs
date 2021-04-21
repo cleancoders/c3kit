@@ -1,15 +1,15 @@
 (ns c3kit.bucket.db
 "A Simple in-memory database.
  Data pulled from the server is stored here to be easily retrieved some time later."
-(:require
-  [c3kit.apron.corec :as ccc :refer [->options]]
-  [c3kit.bucket.dbc :as dbc]
-  [c3kit.apron.log :as log]
-  [poker.legend :as legend]
-  [reagent.core :as reagent]
-  ))
+  (:require
+    [c3kit.apron.corec :as ccc]
+    [c3kit.apron.legend :as legend]
+    [c3kit.apron.log :as log]
+    [c3kit.apron.utilc :as utilc]
+    [c3kit.bucket.dbc :as dbc]
+    ))
 
-(def ^:private db (reagent/atom {:all {}}))
+(def ^:private db (atom {:all {}}))
 
 (def ^:private id-source (atom 1000))
 
@@ -34,7 +34,7 @@
 (defn- install-entity [db e]
        (assert (:id e) (str "entity missing id!: " e))
        (let [original (get-in db [:all (:id e)])
-             e (-> (ccc/keywordize-kind e)
+             e (-> (utilc/keywordize-kind e)
                    (merge-with-original original)
                    legend/coerce!)]
             (-> db
@@ -79,7 +79,7 @@
          (reload entity)))
 
 (defn tx [& args]
-      (let [e (->options args)]
+      (let [e (ccc/->options args)]
            (when (seq e)
                  (let [e (ensure-id e)]
                       (swap! db tx-entity e)
