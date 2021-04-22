@@ -31,6 +31,8 @@
     (.awaitTermination executor 5 TimeUnit/SECONDS))
   (dissoc app :background))
 
+(def service (app/service 'c3kit.bucket.bg/start c3kit.bucket.bg/stop))
+
 (defn task [key] (get @@background key))
 
 (defn- new-task-record! [key] (db/tx :kind :bg-task :key key :last-ran-at time/epoch))
@@ -61,3 +63,16 @@
   (log/info "Cancelling task: " key)
   (when-let [^ScheduledFuture task (get @@background key)]
     (.cancel task false)))
+
+(defn start-scheduled-tasks [tasks app]
+  (reduce
+    (fn [app [key period task-fn]]
+      (assoc app key (schedule key period task-fn)))
+    app tasks))
+
+(defn stop-scheduled-tasks [tasks app]
+  (reduce
+    (fn [app [key _ _]]
+      (cancel-task key)
+      (dissoc app key))
+    app tasks))

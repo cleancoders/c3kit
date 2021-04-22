@@ -10,6 +10,9 @@
     ))
 
 (def ^:private db (atom {:all {}}))
+(defn replace-db-atom! [new-atom]
+  (reset! new-atom @db)
+  (set! db new-atom))
 
 (def ^:private id-source (atom 1000))
 
