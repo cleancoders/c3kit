@@ -3,7 +3,7 @@
     [c3kit.apron.schema :as schema]
     [c3kit.bucket.migrate :as sut]
     [speclj.core :refer :all]
-    ))
+    [c3kit.apron.log :as log]))
 
 (def pet
   {:kind        (schema/kind :pet)
@@ -38,6 +38,7 @@
 ;; Used in test migration
 (def test-schema [pet temperaments])
 
+
 (describe "Migrate"
 
   (context "db schema"
@@ -47,7 +48,7 @@
         (should-contain [:species :string] db-schema)
         (should-contain [:birthday :instant] db-schema)
         (should-contain [:length :float] db-schema)
-        (should-contain [:teeth :int] db-schema)
+        (should-contain [:teeth :long] db-schema)
         (should-contain [:name :string :unique-value] db-schema)
         (should-contain [:owner :ref] db-schema)
         (should-contain [:colors :string :many] db-schema)
