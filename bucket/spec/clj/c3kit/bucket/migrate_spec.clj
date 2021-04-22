@@ -1,5 +1,6 @@
 (ns c3kit.bucket.migrate-spec
   (:require
+    [c3kit.apron.schema :as schema]
     [c3kit.bucket.migrate :as sut]
     [speclj.core :refer :all]
     ))
@@ -14,7 +15,7 @@
                  :message "must be a date"}
    :length      {:type    :float
                  :message "must be unit in feet"}
-   :teeth       {:type     :int
+   :teeth       {:type     :long
                  :validate [#(and (<= 0 %) (<= % 999))]
                  :message  "must be between 0 and 999"}
    :name        {:type     :string
@@ -33,6 +34,9 @@
 (def temperaments
   {:enum   :temperament
    :values [:wild :domestic]})
+
+;; Used in test migration
+(def test-schema [pet temperaments])
 
 (describe "Migrate"
 

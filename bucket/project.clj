@@ -24,5 +24,6 @@
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]
   :resource-paths ["resources"]
 
-  :aliases {"cljs" ["run" "-m" "c3kit.scaffold.cljs"]}
+  :aliases {"cljs" ["run" "-m" "c3kit.scaffold.cljs"]
+            "migrate" ["run" "-m" "c3kit.bucket.migrate"]}
   )

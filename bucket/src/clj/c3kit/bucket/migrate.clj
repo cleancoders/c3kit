@@ -96,7 +96,7 @@
       (throw e))))
 
 (defn init []
-  (app/start! [db/start])
+  (app/start! [db/service])
   (init-migration-list))
 
 (defn- db-entity-schema [schema]
@@ -128,7 +128,7 @@
 
 (defn -main [& args]
   (try
-    (let [config (util/read-edn-resource "datomic.edn")]
+    (let [config (db/load-config)]
       (init)
 
       (log/info!)
@@ -136,12 +136,12 @@
       (when-not (contains? (set args) "init")
         (log/info "Running Migrations")
 
-        (doseq [migration (available-migrations)]
+        (doseq [migration (available-migrations config)]
           (migrate! (:migration-ns-prefix config) migration)))
 
       (let [full-schema-var (:full-schema config)
             _ (when-not full-schema-var (throw (Exception. ":full-schema missing from datomic.edn")))
-            full-schema (util/resolve-var full-schema-var)
+            full-schema @(util/resolve-var full-schema-var)
             schema (mapcat ->db-schema full-schema)]
         (log/info "Applying full schema. " (count schema) " attributes")
         @(db/transact! schema))

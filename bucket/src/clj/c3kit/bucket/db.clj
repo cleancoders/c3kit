@@ -15,8 +15,10 @@
   (api/create-database uri)
   (api/connect uri))
 
+(defn load-config [] (util/read-edn-resource "config/datomic.edn"))
+
 (defn start [app]
-  (let [config (util/read-edn-resource "datomic.edn")
+  (let [config (load-config)
         uri (:uri config)]
     (log/info "Connecting to datomic at: " uri)
     (assoc app :datomic-connection (connect uri))))
@@ -24,6 +26,8 @@
 (defn stop [app]
   (log/info "Connection to datomic discarded")
   (dissoc app :datomic-connection))
+
+(def service (app/service 'c3kit.bucket.db/start 'c3kit.bucket.db/stop))
 
 (defonce connection (app/resolution! :datomic-connection))
 
