@@ -15,15 +15,14 @@
                  [ring/ring "1.8.1"]
                  ]
 
-  :profiles {:dev {:resource-paths ["resources"]
+  :profiles {:dev {:resource-paths ["dev"]
                    :dependencies [[speclj "3.3.2"]]}}
 
   :plugins [[speclj "3.3.2"]]
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]
-  :resource-paths ["resources"]
-
+  :resource-paths []
 
   :aliases {"cljs" ["run" "-m" "c3kit.scaffold.cljs"]}
   )

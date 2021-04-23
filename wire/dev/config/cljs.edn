@@ -1,25 +1,23 @@
 {
  ; :env-keys ["property.name" "ENV_NAME"] ; default: ["c3.env" "C3_ENV"]
- :run-cmd "phantomjs resources/public/specs/speclj.js"
+ :run-cmd "phantomjs dev/specs/speclj.js"
  :development {:cache-analysis true
-               :libs           ["src/js/"]
                :optimizations  :none
-               :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_apron_dev.js"
+               :output-dir     "target/cljs/"
+               :output-to      "target/cljs/c3kit_wire_dev.js"
                :pretty-print   true
                :source-map     true
                :sources        ["spec/cljc" "spec/cljs" "src/cljc" "src/cljs"]
                :specs          true
                :verbose        false
-               :watch-fn       c3kit.apron.cljs/on-dev-compiled
+               :watch-fn       c3kit.scaffold.cljs/on-dev-compiled
                }
  :production  {
                :cache-analysis false
                :infer-externs  true
-               :libs           ["src/js/"]
                :optimizations  :advanced
-               :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_apron.js"
+               :output-dir     "target/cljs/"
+               :output-to      "target/cljs/c3kit_wire.js"
                :pretty-print   false
                ;:pretty-print   true
                ;:pseudo-names   true
@@ -30,10 +28,9 @@
  :staging     {
                :cache-analysis false
                :infer-externs  true
-               :libs           ["src/js/"]
                :optimizations  :whitespace
-               :output-dir     "resources/public/cljs/"
-               :output-to      "resources/public/cljs/c3kit_apron.js"
+               :output-dir     "target/cljs/"
+               :output-to      "target/cljs/c3kit_wire.js"
                :pretty-print   true
                :pseudo-names   true
                :sources        ["src/cljc" "src/cljs"]

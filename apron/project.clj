@@ -12,7 +12,8 @@
                  ;[com.cognitect/transit-clj "1.0.324" :exclusions [commons-codec]]
                  ]
 
-  :profiles {:dev {:dependencies [
+  :profiles {:dev {:resource-paths ["dev"]
+                   :dependencies [
                                   [org.clojure/clojurescript "1.10.764"]
                                   [speclj "3.3.2"]
                                   ]}}
@@ -21,7 +22,7 @@
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]
-  :resource-paths ["resources"]
+  :resource-paths []
 
   :aliases {"cljs" ["run" "-m" "c3kit.apron.cljs"]}
   )

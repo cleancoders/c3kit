@@ -10,9 +10,10 @@
 ;; which we don't want in apron. scaffold depends on apron, so to avoid circular dependency, we copy the code.
 
 (def build-config (atom nil))
+(def run-cmd (atom "phantomjs resources/public/specs/speclj.js"))
 
 (defn run-specs [auto?]
-  (let [cmd (str "phantomjs resources/public/specs/speclj.js" (when auto? " auto"))
+  (let [cmd (str @run-cmd (when auto? " auto"))
         process (.exec (Runtime/getRuntime) cmd)
         output (.getInputStream process)
         error (.getErrorStream process)]
@@ -52,6 +53,7 @@
   (let [once-or-auto (or (first args) "auto")
         config (util/read-edn-resource "config/cljs.edn")
         build-key (keyword (or (second args) (app/find-env (or (:env-keys config) app/env-keys))))]
+    (when-let [cmd (:run-cmd config)] (reset! run-cmd cmd))
     (reset! build-config (resolve-watch-fn (get config build-key)))
     (assert (#{"once" "auto"} once-or-auto) (str "Unrecognized build frequency: " once-or-auto ". Must be 'once' or 'auto'"))
     (println "Compiling ClojureScript:" once-or-auto build-key)

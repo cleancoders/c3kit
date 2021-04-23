@@ -1,15 +1,17 @@
 (ns c3kit.scaffold.cljs
   (:import (cljs.closure Inputs Compilable))
-  (:require [cljs.build.api :as api]
-            [clojure.java.io :as io]
-            [c3kit.apron.util :as util]
-            [c3kit.apron.app :as app]
-            ))
+  (:require
+    [c3kit.apron.app :as app]
+    [c3kit.apron.util :as util]
+    [cljs.build.api :as api]
+    [clojure.java.io :as io]
+    ))
 
 (def build-config (atom nil))
+(def run-cmd (atom "phantomjs resources/public/specs/speclj.js"))
 
 (defn run-specs [auto?]
-  (let [cmd (str "phantomjs resources/public/specs/speclj.js" (when auto? " auto"))
+  (let [cmd (str @run-cmd (when auto? " auto"))
         process (.exec (Runtime/getRuntime) cmd)
         output (.getInputStream process)
         error (.getErrorStream process)]
@@ -49,6 +51,7 @@
   (let [once-or-auto (or (first args) "auto")
         config (util/read-edn-resource "config/cljs.edn")
         build-key (keyword (or (second args) (app/find-env (or (:env-keys config) app/env-keys))))]
+    (when-let [cmd (:run-cmd config)] (reset! run-cmd cmd))
     (reset! build-config (resolve-watch-fn (get config build-key)))
     (assert (#{"once" "auto"} once-or-auto) (str "Unrecognized build frequency: " once-or-auto ". Must be 'once' or 'auto'"))
     (println "Compiling ClojureScript:" once-or-auto build-key)

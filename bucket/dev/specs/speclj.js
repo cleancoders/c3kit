@@ -9,7 +9,7 @@
  Each run produced/touches a timestamp file, .specljs-timestamp
  */
 
-var nsPrefix = "c3kit.apron"
+var nsPrefix = "c3kit.bucket"
 
 var fs = require("fs");
 var p = require('webpage').create();
@@ -116,7 +116,7 @@ findAffectedSpecs = function () {
   return reduceToSpecs(result);
 };
 
-p.open("resources/public/specs/specs.html", function (status) {
+p.open("dev/specs/specs.html", function (status) {
   try {
     var specs = autoMode() ? findAffectedSpecs() : null;
 

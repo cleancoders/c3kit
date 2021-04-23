@@ -1,7 +1,7 @@
 {
  :source-dir  "spec/c3kit/scaffold/css"
  :var          c3kit.scaffold.css.sample/screen
- :output-file "resources/public/css/c3kit_scaffold.css"
+ :output-file "target/css/c3kit_scaffold.css"
  :flags       {:pretty-print? true
                :vendors       ["webkit" "moz" "o"]}
  }

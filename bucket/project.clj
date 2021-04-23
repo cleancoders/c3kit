@@ -11,7 +11,7 @@
                  [org.clojure/clojure "1.10.3"]
                  ]
 
-  :profiles {:dev {:resource-paths ["resources" "dev"]
+  :profiles {:dev {:resource-paths ["dev"]
                    :dependencies [
                                   [c3kit/scaffold "0.1.0-SNAPSHOT"]
                                   [cljsjs/hashids "1.0.2-0"]
@@ -22,7 +22,7 @@
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]
-  :resource-paths ["resources"]
+  :resource-paths []
 
   :aliases {"cljs" ["run" "-m" "c3kit.scaffold.cljs"]
             "migrate" ["run" "-m" "c3kit.bucket.migrate"]}

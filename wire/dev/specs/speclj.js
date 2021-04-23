@@ -116,7 +116,7 @@ findAffectedSpecs = function () {
   return reduceToSpecs(result);
 };
 
-p.open("resources/public/specs/specs.html", function (status) {
+p.open("dev/specs/specs.html", function (status) {
   try {
     var specs = autoMode() ? findAffectedSpecs() : null;
 

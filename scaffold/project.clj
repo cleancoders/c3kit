@@ -12,13 +12,14 @@
                  [org.clojure/tools.namespace "1.0.0"]
                  ]
 
-  :profiles {:dev {:dependencies [[speclj "3.3.2"]]}}
+  :profiles {:dev {:resource-paths ["resources"]
+                   :dependencies [[speclj "3.3.2"]]}}
 
   :plugins [[speclj "3.3.2"]]
 
   :source-paths ["src"]
   :test-paths ["spec"]
-  :resource-paths ["resources"]
+  :resource-paths []
 
   :aliases {"cljs" ["run" "-m" "c3kit.scaffold.cljs"]
             "css"  ["run" "-m" "c3kit.scaffold.css"]}
