@@ -15,9 +15,7 @@
     (log/report "API version: " timestamp)
     (assoc app :api/version timestamp)))
 
-(def stop identity)
-
-(def version (app/resolution! :api/version))
+(def version (app/resolution :api/version))
 
 (defn maybe-validation-errors [entity]
   (when-let [error-map (schema/error-message-map entity)]

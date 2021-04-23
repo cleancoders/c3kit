@@ -83,7 +83,7 @@
 
 (defn development?
   "Return true if env resolves to 'development'"
-  [] (= "development" @env))
+  [] (or (not @env) (= "development" @env)))
 
 (defn production?
   "Return true if env resolves to 'production'"

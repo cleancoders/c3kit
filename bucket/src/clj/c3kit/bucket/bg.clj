@@ -61,8 +61,9 @@
 
 (defn cancel-task [key]
   (log/info "Cancelling task: " key)
-  (when-let [^ScheduledFuture task (get @@background key)]
-    (.cancel task false)))
+  (when-let [bg-resolution @background]
+    (when-let [^ScheduledFuture task (get @bg-resolution key)]
+      (.cancel task false))))
 
 (defn start-scheduled-tasks [tasks app]
   (reduce

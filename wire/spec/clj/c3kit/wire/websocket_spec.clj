@@ -7,9 +7,13 @@
     [speclj.core :refer :all]
     ))
 
+(defn on-close-foo [{:keys [connection-id]}] {:foo connection-id})
+(def foo-handlers {:ws/close 'c3kit.wire.websocket-spec/on-close-foo})
+
 (describe "websocket"
 
   (with-stubs)
+  (before (sut/install-handlers! nil))
   (around [it] (with-redefs [api/version (atom "123")] (log/capture-logs (it))))
 
   (it "invokes default handler by default"
@@ -33,14 +37,15 @@
     (should-contain "UNHANDLED websocket connection closed: uid123" (log/captured-logs-str)))
 
   (it "installed connection closed handler"
-    (with-redefs [sut/on-connection-closed-handler (atom (fn [id] {:foo id}))]
-      (let [response (sut/message-handler {:kind :ws/close :connection-id "uid123"})]
-        (should= "uid123" (:foo response)))
-      (should-not-contain "UNHANDLED websocket connection closed: uid123" (log/captured-logs-str))))
+    (sut/install-handlers! 'c3kit.wire.websocket-spec/foo-handlers)
+    (let [response (sut/message-handler {:kind :ws/close :connection-id "uid123"})]
+      (should= "uid123" (:foo response)))
+    (should-not-contain "UNHANDLED websocket connection closed: uid123" (log/captured-logs-str)))
 
   (it "includes the version"
     (let [response (sut/message-handler {:id :chsk/ws-ping})]
       (should= "123" (:version response))))
+
 
 
   ;(it "handles :ws/close"

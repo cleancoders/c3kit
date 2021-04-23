@@ -27,15 +27,25 @@
   [& cols]
   (vec (apply concat cols)))
 
-(defn dissocv
-  "removes the item at index i from the vector"
-  [col i]
-  (vec (concat (subvec col 0 i) (subvec col (inc i)))))
-
 (defn assocv
   "insert elem into vector at index "
   [coll i elem]
   (vec (concat (subvec coll 0 i) [elem] (subvec coll i))))
+
+(defn dissocv
+  "removes the item at index i from the vector"
+  [coll i]
+  (vec (concat (subvec coll 0 i) (subvec coll (inc i)))))
+
+(defn assocv>>
+  "assocv with coll as last param"
+  [i elem coll]
+  (assocv coll i elem))
+
+(defn dissocv>>
+  "dissocv with coll as last param"
+  [i coll]
+  (dissocv coll i))
 
 (defn removev [pred col]
   "core/remove returning a vector"

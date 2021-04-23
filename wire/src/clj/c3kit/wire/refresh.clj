@@ -4,6 +4,7 @@
   (:require
     [c3kit.apron.app :as app]
     [c3kit.apron.log :as log]
+    [c3kit.apron.util :as util]
     [clojure.java.io :as io]
     [clojure.set :as set]
     [clojure.string :as str]
@@ -11,9 +12,12 @@
     [clojure.tools.namespace.reload :as reload]
     ))
 
-(def excludes (atom #{}))
-(defn exclude! [& var-syms]
-  (swap! excludes (fn [exs] (set (concat exs var-syms)))))
+(defonce excludes (atom #{}))
+(defonce services (atom []))
+
+(defn init [s exclude-syms]
+  (reset! services s)
+  (swap! excludes (fn [exs] (set (concat exs exclude-syms)))))
 
 ;; MDM : Copied from clojure.tools.namespace.dir because they're private.
 
@@ -69,9 +73,6 @@
       (update-files tracker deleted modified)
       tracker)))
 
-(defonce services (atom []))
-
-(defn init [s] (reset! services s))
 
 (defn reload [tracker]
   (if-let [to-load (seq (:clojure.tools.namespace.track/load tracker))]
@@ -102,6 +103,6 @@
 (defn refresh-handler [root-sym]
   (fn [request]
     (refresh!)
-    (let [root-handler (app/resolve-var root-sym)]
+    (let [root-handler (util/resolve-var root-sym)]
       (root-handler request))))
 

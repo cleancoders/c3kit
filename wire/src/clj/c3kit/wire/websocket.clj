@@ -10,9 +10,9 @@
     [c3kit.wire.websocketc :as wsc]
     ))
 
-(def nil-app-handlers {})
-(def app-handlers-var (atom 'c3kit.wire.websocket/nil-app-handlers))
-(defn set-app-handlers-var! [var-sym] (reset! app-handlers-var var-sym))
+(def app-handlers-var (atom nil))
+(defn install-handlers! [handlers]
+  (reset! app-handlers-var handlers))
 
 (def server (app/resolution :ws/server))
 
@@ -20,12 +20,6 @@
 
 (def get-handler (delay #(wsc/handler @server %)))
 (def post-handler (delay #(wsc/handler @server %)))
-
-(defn default-on-connection-closed [uid]
-  (log/warn (str "UNHANDLED websocket connection closed: " uid))
-  (apic/ok))
-
-(def on-connection-closed-handler (app/resolution :ws/connection-closed-handler))
 
 (defn- log-message [{:keys [kind connection-id]}]
   (log/trace (str "websocket call: " kind " client: " connection-id))
@@ -37,31 +31,28 @@
   (log/warn "Unhandled websocket event:" kind)
   (throw (ex-info (str "Unsupported websocket Call: " kind) msg)))
 
-(defn dispatch-closed-connection [connection-id]
-  (if-let [handler @on-connection-closed-handler]
-    (handler connection-id)
-    (default-on-connection-closed connection-id)))
-
-(defn closed-connection-detected [{:keys [connection-id]}] (dispatch-closed-connection connection-id))
+(defn default-on-connection-closed [{:keys [connection-id]}]
+  (log/warn (str "UNHANDLED websocket connection closed: " connection-id))
+  (apic/ok))
 
 (defn close! [cid] #_(@send-fn cid [:chsk/close]))
 
-;(defn client-closed-connection [{:keys [connection-id]}]
-;  (close! connection-id)
-;  (dispatch-closed-connection connection-id))
-
-(def builtin-actions {:ws/open  'c3kit.wire.websocket/log-message
-                      :ws/close 'c3kit.wire.websocket/closed-connection-detected
-                      :ws/ping  'c3kit.wire.websocket/pong
-                      ;:ws/close 'poker.websocket-custom/client-closed-connection
-                      })
+(def default-handlers {:ws/open  'c3kit.wire.websocket/log-message
+                       :ws/close 'c3kit.wire.websocket/default-on-connection-closed
+                       :ws/ping  'c3kit.wire.websocket/pong
+                       ;:ws/close 'poker.websocket-custom/client-closed-connection
+                       })
 
 (def handler-cache (atom {}))
 
 (defn resolve-handler [id]
-  (let [app-actions @(util/resolve-var @app-handlers-var)]
-    (when-let [action-sym (or (get builtin-actions id) (get app-actions id))]
-      (util/resolve-var action-sym))))
+  (if @app-handlers-var
+    (let [app-actions @(util/resolve-var @app-handlers-var)]
+      (when-let [action-sym (or (get app-actions id) (get default-handlers id))]
+        (util/resolve-var action-sym)))
+    (do (log/warn "app-handler-var has not been set")
+        (when-let [action-sym (get default-handlers id)]
+          (util/resolve-var action-sym)))))
 
 (defn cached-resolve-handler [id]
   (if-let [action (get @handler-cache id)]
@@ -70,7 +61,10 @@
       (swap! handler-cache assoc id action)
       action)))
 
-(def handler-resolver (if (app/development?) resolve-handler cached-resolve-handler))
+(def handler-resolver (if (app/development?)
+                        (do (log/warn "websocket in development mode, not caching handlers")
+                            resolve-handler)
+                        cached-resolve-handler))
 
 (defn push! [client-id event params]
   (wsc/call! @server client-id event params)
@@ -99,6 +93,7 @@
             (:errors data) (apic/error (:errors data) (.getMessage exi))
             :else (apic/error nil (.getMessage exi)))))
       (catch Throwable e
+        (.printStackTrace e)
         (log/error e)
         (apic/error nil (.getMessage e))))))
 
@@ -122,14 +117,16 @@
         (handler msg)))))
 
 (defn start [app]
-  (log/info "Starting custom websocket")
+  (log/info "Starting websocket")
   (let [handler (if (app/development?) (refresh-handler) message-handler)
         server (wsc/create handler)]
     (assoc app :ws/server server)))
 
 (defn stop [app]
-  (log/info "Stopping custom websocket")
+  (log/info "Stopping websocket")
   (dissoc app :ws/server))
+
+(def service (app/service 'c3kit.wire.websocket/start 'c3kit.wire.websocket/stop))
 
 
 
