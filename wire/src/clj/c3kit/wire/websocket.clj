@@ -61,17 +61,17 @@
       (swap! handler-cache assoc id action)
       action)))
 
-(def handler-resolver (if (app/development?)
-                        (do (log/warn "websocket in development mode, not caching handlers")
-                            resolve-handler)
-                        cached-resolve-handler))
+(def handler-resolver (atom cached-resolve-handler))
+(defn development! []
+  (log/warn "websocket in development mode, not caching handlers!!!")
+  (reset! handler-resolver resolve-handler))
 
 (defn push! [client-id event params]
   (wsc/call! @server client-id event params)
   )
 
 (defn dispatch-message [msg]
-  (if-let [action (handler-resolver (:kind msg))]
+  (if-let [action (@handler-resolver (:kind msg))]
     (action msg)
     (unhandled-message msg)))
 
@@ -117,13 +117,14 @@
         (handler msg)))))
 
 (defn start [app]
-  (log/info "Starting websocket")
+  (log/report "Starting websocket")
+  (when (app/development?) (development!))
   (let [handler (if (app/development?) (refresh-handler) message-handler)
         server (wsc/create handler)]
     (assoc app :ws/server server)))
 
 (defn stop [app]
-  (log/info "Stopping websocket")
+  (log/report "Stopping websocket")
   (dissoc app :ws/server))
 
 (def service (app/service 'c3kit.wire.websocket/start 'c3kit.wire.websocket/stop))

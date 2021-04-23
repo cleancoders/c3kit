@@ -13,7 +13,8 @@
 (describe "websocket"
 
   (with-stubs)
-  (before (sut/install-handlers! nil))
+  (before (sut/install-handlers! nil)
+          (sut/development!))
   (around [it] (with-redefs [api/version (atom "123")] (log/capture-logs (it))))
 
   (it "invokes default handler by default"

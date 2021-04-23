@@ -22,7 +22,7 @@
 
 (defonce background (app/resolution :background))
 
-(defn ^ScheduledThreadPoolExecutor executor [] (:executor @@background))
+(defn ^ScheduledThreadPoolExecutor executor [] (when @background (:executor @@background)))
 
 (defn stop [app]
   (when-let [executor (executor)]
@@ -31,7 +31,7 @@
     (.awaitTermination executor 5 TimeUnit/SECONDS))
   (dissoc app :background))
 
-(def service (app/service 'c3kit.bucket.bg/start c3kit.bucket.bg/stop))
+(def service (app/service 'c3kit.bucket.bg/start 'c3kit.bucket.bg/stop))
 
 (defn task [key] (get @@background key))
 
