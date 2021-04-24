@@ -6,6 +6,7 @@
 
   :dependencies [
                  [c3kit/apron "0.1.0-SNAPSHOT"]
+                 [cljsjs/hashids "1.0.2-0"]
                  [com.datomic/datomic-free "0.9.5697" :exclusions [com.google.guava/guava]]
                  [jstrutz/hashids "1.0.1"]
                  [org.clojure/clojure "1.10.3"]
@@ -14,7 +15,6 @@
   :profiles {:dev {:resource-paths ["dev"]
                    :dependencies [
                                   [c3kit/scaffold "0.1.0-SNAPSHOT"]
-                                  [cljsjs/hashids "1.0.2-0"]
                                   [speclj "3.3.2"]
                                   ]}}
 

@@ -2,8 +2,9 @@
   (:require
     [c3kit.apron.corec :refer [conjv]]
     [c3kit.apron.log :as log]
-    [c3kit.wire.js :as cc]
     [c3kit.wire.flashc :as flashc]
+    [c3kit.wire.js :as wjs]
+    [c3kit.wire.util :as util]
     [reagent.core :as reagent]
     ))
 
@@ -36,7 +37,7 @@
     (log/debug "adding flash: " f)
     (swap! state add-no-dups f)
     (when-not (:persist f)
-      (cc/timeout @flash-timeout-millis #(remove! f)))
+      (wjs/timeout @flash-timeout-millis #(remove! f)))
     f))
 
 (defn add-success! [msg] (add! (flashc/success msg)))
@@ -48,7 +49,7 @@
     [:div.flash-message {:class (flashc/flash-class flash)}
      [:div.container
       [:p [:span {:on-click #(remove! flash)} "✕"]
-       [:span.flash-message-text (if (seq? text) (cc/with-react-keys text) text)]]]]))
+       [:span.flash-message-text (if (seq? text) (util/with-react-keys text) text)]]]]))
 
 (defn flash-root []
   (when-let [flashes (seq @state)]
