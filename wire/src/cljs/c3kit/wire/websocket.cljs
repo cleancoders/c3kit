@@ -1,6 +1,6 @@
 (ns c3kit.wire.websocket
   (:require
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.apron.corec :as ccc]
     [c3kit.apron.log :as log]
     [c3kit.wire.api :as api]

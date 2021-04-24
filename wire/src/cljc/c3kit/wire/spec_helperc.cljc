@@ -26,7 +26,7 @@
              (when node#
                (-fail (str "Expected selector NOT to find node: " (-to-s value#)))))))
 
-#?(:clj (defmacro should-have-invoked-webs
+#?(:clj (defmacro should-have-invoked-ws
                   "Asserts the invocation of ws/call!"
           ([id] `(should= ~id (c3kit.wire.spec-helper/last-ws-call-id)))
           ([id params]

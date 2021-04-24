@@ -4,16 +4,10 @@
   [c3kit.apron.corec :refer [->options]]
   [c3kit.wire.flashc :as flashc]
   [c3kit.apron.log :as log]
-  [c3kit.apron.time :as time]
   [speclj.core :refer :all]
   ))
 
 (log/warn!)
-
-(defmacro stub-now [time]
-  `(around [it#]
-     (with-redefs [time/now (stub :now {:return ~time})]
-       (it#))))
 
 (defmacro should-redirect-to
           [response location]

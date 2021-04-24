@@ -4,7 +4,7 @@
                                         should-contain should-not-contain should should-not-have-invoked stub]]
                    [c3kit.wire.spec-helperc :refer [should-select should-not-select]])
   (:require
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as sut]
     [c3kit.wire.flashc :as flashc]
     [c3kit.wire.spec-helper :as helper]

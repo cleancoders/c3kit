@@ -4,7 +4,7 @@
     [c3kit.apron.corec :as ccc]
     [c3kit.apron.log :as log]
     [c3kit.wire.api :as api]
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
     [cljs-http.client :as http]
     [cljs.core.async :as async]

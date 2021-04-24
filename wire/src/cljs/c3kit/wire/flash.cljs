@@ -2,7 +2,7 @@
   (:require
     [c3kit.apron.corec :refer [conjv]]
     [c3kit.apron.log :as log]
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.wire.flashc :as flashc]
     [reagent.core :as reagent]
     ))

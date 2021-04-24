@@ -6,7 +6,7 @@
     [c3kit.apron.log :as log]
     [c3kit.wire.ajax :as sut]
     [c3kit.wire.api :as api]
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
     [c3kit.wire.spec-helper :as helper]
     [speclj.core]

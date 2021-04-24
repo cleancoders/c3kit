@@ -1,9 +1,11 @@
-(ns c3kit.wire.core-spec
+(ns c3kit.wire.util-spec
   (:require-macros [speclj.core :refer [describe context it should= should-not= after before should-contain around with]])
-  (:require [c3kit.wire.core :as sut]
-            [speclj.core]))
+  (:require
+    [c3kit.wire.util :as sut]
+    [speclj.core]
+    ))
 
-(describe "Core"
+(describe "Util"
 
   (it "converts error map to strings"
     (should= ["email can't be blank"

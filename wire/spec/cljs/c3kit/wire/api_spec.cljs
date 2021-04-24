@@ -4,7 +4,7 @@
                                         should-contain should-not-contain stub should-not-have-invoked should-have-invoked]])
   (:require
     [c3kit.wire.api :as sut]
-    [c3kit.wire.core :as cc]
+    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
     [c3kit.wire.flashc :as flashc]
     [speclj.core]))
