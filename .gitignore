@@ -15,5 +15,6 @@
 /classes
 /lib
 /target
+hs_err_*.log
 pom.xml
 pom.xml.asc

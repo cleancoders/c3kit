@@ -17,10 +17,13 @@
 
 (def version (app/resolution :api/version))
 
+(defn validation-errors-response [error-map]
+  (-> (apic/ok {:errors error-map})
+      (apic/flash-warn "Validation errors...")))
+
 (defn maybe-validation-errors [entity]
   (when-let [error-map (schema/error-message-map entity)]
-    (-> (apic/ok {:errors error-map})
-        (apic/flash-warn "Validation errors..."))))
+    (validation-errors-response error-map)))
 
 (defn maybe-entity-errors [entity]
   (when-let [errors (schema/messages entity)]

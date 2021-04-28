@@ -28,12 +28,17 @@
 
 (defn redirect
   ([uri] (response (apic/redirect uri)))
-  ([uri payload] (response (apic/redirect uri payload))))
+  ([uri payload] (response (apic/redirect uri payload)))
+  ([uri payload msg] (-> (apic/redirect uri payload)
+                         (apic/flash-warn msg)
+                         response)))
+
+(defn validation-errors-response [entity]
+  (response (api/validation-errors-response entity)))
 
 (defn maybe-validation-errors [entity]
-  (when-let [error-map (schema/error-message-map entity)]
-    (-> (ok {:errors error-map})
-        (update :body apic/flash-warn "Validation errors..."))))
+  (when-let [r (api/maybe-validation-errors entity)]
+    (response r)))
 
 (defn payload [response] (-> response :body :payload))
 (defn status [response] (-> response :body :status))

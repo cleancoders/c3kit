@@ -1,10 +1,11 @@
 (ns c3kit.wire.util
-(:require
-  [c3kit.apron.log :as log]
-  [clojure.string :as str]
-  [goog.dom :as dom]
-  [goog.dom.forms :as form]
-  ))
+  (:require
+    [c3kit.apron.log :as log]
+    [clojure.string :as str]
+    [clojure.walk :as walk]
+    [goog.dom :as dom]
+    [goog.dom.forms :as form]
+    ))
 
 (defn errors->strings [errors]
   (map
@@ -44,6 +45,18 @@
       (partition 2 (interleave col (range))))))
 
 (defn keyed-list [& args] (with-react-keys args))
+
+(def next-key
+  (let [k (atom 0)]
+    (fn [] (swap! k inc))))
+
+(defn with-nested-react-keys [tree]
+  (walk/postwalk
+    (fn [node]
+      (if (vector? node)
+        (with-meta node (assoc (meta node) :key (next-key)))
+        node))
+    tree))
 
 (defn atom-observer
   "Used to keep track of cursor state.

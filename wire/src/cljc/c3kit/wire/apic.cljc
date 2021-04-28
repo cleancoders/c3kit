@@ -60,5 +60,6 @@
 (defn ok? [response] (= :ok (:status response)))
 (defn fail? [response] (= :fail (:status response)))
 (defn redirect? [response] (= :redirect (:status response)))
+(defn payload [response] (:payload response))
 
 

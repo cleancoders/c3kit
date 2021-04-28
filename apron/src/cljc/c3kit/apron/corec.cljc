@@ -61,6 +61,11 @@
   (println "v: " v)
   v)
 
+(defn index-of
+  "Returns the index of e (using =) in the seq. nil if missing."
+  [e coll]
+  (first (keep-indexed #(if (= e %2) %1) coll)))
+
 (defn ->options
   "Takes keyword argument and converts them to a map.  If the args are prefixed with a map, the rest of the
   args are merged in."

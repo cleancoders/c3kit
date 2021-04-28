@@ -85,6 +85,7 @@
 (defn frame-window [iframe] (.-contentWindow iframe))
 (defn post-message [window message target-domain] (.postMessage window (clj->js message) target-domain))
 (defn register-post-message-handler [handler] (.addEventListener js/window "message" handler))
+(defn register-storage-handler [handler] (.addEventListener js/window "storage" handler))
 (defn screen-size [] [(.-width js/screen) (.-height js/screen)])
 (defn node-width [node] (.-clientWidth node))
 (defn node-height [node] (.-clientHeight node))
@@ -96,6 +97,8 @@
 (defn child-nodes [node] (array-seq (.-childNodes node)))
 (defn context-2d [canvas] (.getContext canvas "2d"))
 (defn close-window! [] (.close js/window))
+(defn set-local-storage [key value] (.setItem js/localStorage key value))
+(defn remove-local-storage [key] (.removeItem js/localStorage key))
 
 (defn download [url filename]
   (let [a (.createElement js/document "a")]
@@ -143,3 +146,7 @@
 (defn stroke-rect! [ctx [x1 y1] [x2 y2]] (.strokeRect ctx x1 y1 x2 y2))
 (defn fill-text! [ctx text [x y]] (.fillText ctx text x y))
 
+(defn scroll-into-view [node-id]
+  (.scrollIntoView (.getElementById js/document node-id) (clj->js {:behavior "smooth"})))
+
+(defn scroll-to-top [] (.scrollTo js/window (clj->js {:behavior "smooth" :top 0})))
