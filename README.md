@@ -1,6 +1,6 @@
 #  c3kit : Clean Coders Clojure Kit
 
-... a library of tools to help build clojure applications.
+... libraries to help build clojure applications.
 
 ## [Apron](https://github.com/cleancoders/c3kit/tree/main/apron) 
 
