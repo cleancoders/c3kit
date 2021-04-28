@@ -1,12 +1,12 @@
-(defproject c3kit/wire "0.1.0-SNAPSHOT"
+(defproject com.cleancoders.c3kit/wire "1.0.0"
 
   :description "Clean Coders Clojure (C3) Kit - Wire: API for AJAX and WebSocket."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [c3kit/apron "0.1.0-SNAPSHOT"]
-                 [c3kit/scaffold "0.1.0-SNAPSHOT"]
+                 [com.cleancoders.c3kit/apron "1.0.0"]
+                 [com.cleancoders.c3kit/scaffold "1.0.0"]
                  [cljs-http/cljs-http "0.1.46"]
                  [http-kit "2.5.1"]
                  [org.clojure/clojure "1.10.3"]
