@@ -1,22 +1,19 @@
-# wire
+# Wire
 
-A Clojure library designed to ... well, that part is up to you.
+![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire.png)
 
-## Usage
+_"If you look very closely at just one wire in the cage, you cannot see the other wires."_ - Marilyn Frye
 
-FIXME
+Wire is a toolset for building rich-client web applications, clojure on the server side and clojurescript on the client side.
 
-## License
-
-Copyright © 2021 FIXME
-
-This program and the accompanying materials are made available under the
-terms of the Eclipse Public License 2.0 which is available at
-http://www.eclipse.org/legal/epl-2.0.
-
-This Source Code may also be made available under the following Secondary
-Licenses when the conditions for such availability set forth in the Eclipse
-Public License, v. 2.0 are satisfied: GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or (at your
-option) any later version, with the GNU Classpath Exception which is available
-at https://www.gnu.org/software/classpath/license.html.
+ * __ajax.clj(s)__ : AJAX comm between client and server
+ * __api(c).clj(c)(s)__ : common api for data used by ajax and websocket
+ * __assets.clj__ : update asset filenames when the content changes
+ * __flash(c).clj(c)(s)__ : flash messages
+ * __refresh.clj__ : dynamic code-reloading in development
+ * __spec-helper(c).clj(c)(s)__ : help test client code
+ * __verbose.clj__ : print request/response info in development
+ * __websocket(c).clj(c)(s) : support for websocket comm between client and server
+ * __dragndrop.cljs__ : simple client side drag and drop
+ * __js.cljs__ : common js fns and features
+ * __util.cljs__ : misc utilities
