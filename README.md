@@ -2,9 +2,8 @@
 
 ... a library of tools to help build clojure applications.
 
-## Apron
-
-[![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron_200.png)](https://github.com/cleancoders/c3kit/tree/main/apron)
+- | -
+## [Apron](https://github.com/cleancoders/c3kit/tree/main/apron) | [![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron_200.png)](https://github.com/cleancoders/c3kit/tree/main/apron)
 
 ## Scaffold
 
