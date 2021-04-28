@@ -1,6 +1,7 @@
 # Wire
 
-![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire.png)
+![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire_200
+.png)
 
 _"If you look very closely at just one wire in the cage, you cannot see the other wires."_ - Marilyn Frye
 

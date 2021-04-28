@@ -4,16 +4,16 @@
 
 ## Apron
 
-![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron.png)
+![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron_200.png)
 
 ## Scaffold
 
-![Scaffold](https://github.com/cleancoders/c3kit/blob/main/img/scaffold.png)
+![Scaffold](https://github.com/cleancoders/c3kit/blob/main/img/scaffold_200.png)
 
 ## Bucket
 
-![Bucket](https://github.com/cleancoders/c3kit/blob/main/img/bucket.png)
+![Bucket](https://github.com/cleancoders/c3kit/blob/main/img/bucket_200.png)
 
 ## Wire
 
-![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire.png)
+![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire_200.png)

@@ -1,6 +1,6 @@
 # Scaffold
 
-![Scaffold](https://github.com/cleancoders/c3kit/blob/main/img/scaffold.png)
+![Scaffold](https://github.com/cleancoders/c3kit/blob/main/img/scaffold_200.png)
 
 _"Truth forever on the scaffold, Wrong forever on the throne,—
 Yet that scaffold sways the future"_ - James Russell Lowell

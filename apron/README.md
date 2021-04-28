@@ -1,6 +1,6 @@
 # Apron
 
-![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron.png)
+![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron_200.png)
 
 _"Where is thy leather apron and thy rule?"_ - Shakespeare
 

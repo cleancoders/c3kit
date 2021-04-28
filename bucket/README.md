@@ -1,6 +1,6 @@
 # Bucket
 
-![Bucket](https://github.com/cleancoders/c3kit/blob/main/img/bucket.png)
+![Bucket](https://github.com/cleancoders/c3kit/blob/main/img/bucket_200.png)
 
 _"Most men give advice by the bucket, but take it by the grain."_ - William R. Alger
 
