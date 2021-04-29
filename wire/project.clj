@@ -1,6 +1,6 @@
 (defproject com.cleancoders.c3kit/wire "1.0.0"
 
-  :description "Clean Coders Clojure (C3) Kit - Wire: API for AJAX and WebSocket."
+  :description "Clean Coders Clojure (C3) Kit - Wire: Rich-client webapp tools."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 

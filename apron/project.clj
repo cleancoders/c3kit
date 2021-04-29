@@ -1,5 +1,5 @@
 (defproject com.cleancoders.c3kit/apron "1.0.0"
-  :description "Clean Coders Clojure (C3) Kit - Apron: The most essential library.  Put your tool apron on before getting to work."
+  :description "Clean Coders Clojure (C3) Kit - Apron: c3kit essentials. Where is thy leather apron and thy rule?."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 

@@ -4,7 +4,7 @@
 
 _"Where is thy leather apron and thy rule?"_ - Shakespeare
 
-Apron consists of necessities that almost any clojue app would find useful.
+Apron consists of necessities that almost any clojure app would find useful.
 
  * __app.clj__ : application service and state management
  * __util.clj__ : misc utilities used by other c3kit code

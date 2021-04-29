@@ -79,7 +79,7 @@
   (fn [msg]
     (log/info "websocket event" (:kind msg) (:params msg))
     (let [result (handler msg)]
-      ;(log/info "result: " result)
+      (log/trace "websocket handler result: " result)
       result)))
 
 (defn wrap-catch-errors [handler]
