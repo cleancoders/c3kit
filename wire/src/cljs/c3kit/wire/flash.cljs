@@ -8,7 +8,7 @@
     [reagent.core :as reagent]
     ))
 
-(def flash-timeout-millis (atom 5))
+(def flash-timeout-millis (atom 5000))
 
 (def state (reagent/atom {}))
 
