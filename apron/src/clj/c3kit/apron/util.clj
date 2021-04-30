@@ -5,7 +5,7 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [c3kit.apron.utilc :as utilc]
-    ))
+    [c3kit.apron.log :as log]))
 
 (defn files-in
   ([pred path] (files-in pred path (.list (io/file path)) []))
@@ -51,14 +51,23 @@
       var
       (throw (Exception. (str "No such var " (name ns-sym) "/" (name var-sym)))))))
 
-(defn resolve-var-or-nil
-  "Same as resolve-var except that it returns nil if the var doesn't exist"
+(defn var-value
+  "Using resolve-var, return the value of the var, or nil if it fails to resolve"
   [var-sym]
-  (try
-    (resolve-var var-sym)
-    (catch Exception e
-      ;(log/error e)
-      nil)))
+  (when var-sym
+    (try
+      @(resolve-var var-sym)
+      (catch Exception e
+        (log/warn "Unable to resolve var:" var-sym (str e))
+        nil))))
+
+(defn config-value
+  "Given a symbol, extract value from resolved var, else return the given value"
+  [sym-or-val]
+  (when sym-or-val
+    (if (symbol? sym-or-val)
+      (var-value sym-or-val)
+      sym-or-val)))
 
 (defn md5
   "MD5 hash the string"

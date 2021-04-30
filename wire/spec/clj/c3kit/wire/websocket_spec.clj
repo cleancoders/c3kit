@@ -13,9 +13,9 @@
 (describe "websocket"
 
   (with-stubs)
-  (before (sut/install-handlers! nil)
+  (before (api/configure! :ws-handlers nil :version "123")
           (sut/development!))
-  (around [it] (with-redefs [api/version (atom "123")] (log/capture-logs (it))))
+  (around [it] (log/capture-logs (it)))
 
   (it "invokes default handler by default"
     (let [response (sut/message-handler {:kind :blah/blah})]
@@ -38,7 +38,7 @@
     (should-contain "UNHANDLED websocket connection closed: uid123" (log/captured-logs-str)))
 
   (it "installed connection closed handler"
-    (sut/install-handlers! 'c3kit.wire.websocket-spec/foo-handlers)
+    (api/configure! :ws-handlers 'c3kit.wire.websocket-spec/foo-handlers)
     (let [response (sut/message-handler {:kind :ws/close :connection-id "uid123"})]
       (should= "uid123" (:foo response)))
     (should-not-contain "UNHANDLED websocket connection closed: uid123" (log/captured-logs-str)))

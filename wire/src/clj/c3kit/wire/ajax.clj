@@ -1,13 +1,12 @@
 (ns c3kit.wire.ajax
   (:require
     [c3kit.apron.log :as log]
-    [c3kit.apron.schema :as schema]
     [c3kit.apron.utilc :as utilc]
     [c3kit.wire.api :as api]
     [c3kit.wire.apic :as apic]
     [c3kit.wire.flash :as flash]
     [ring.util.response :as response]
-    ))
+    [c3kit.apron.util :as util]))
 
 (defn response [body] (response/response body))
 
@@ -45,14 +44,19 @@
 
 (defn api-not-found-handler [request] (fail (:uri request) (str "API not found: " (:uri request))))
 
+(defn default-ajax-ex-handler [request ex]
+  (log/error ex)
+  ;(errors/send-error-email request e)
+  (error nil "Our apologies. An error occurred and we have been notified."))
+
 (defn wrap-catch-api-errors [handler]
   (fn [request]
     (try
       (handler request)
       (catch Exception e
-        (log/error e)
-        ;(errors/send-error-email request e)
-        (error nil "Our apologies. An error occurred and we have been notified.")))))
+        (if-let [ex-handler (util/config-value (:ajax-on-ex @api/config))]
+          (ex-handler request e)
+          (default-ajax-ex-handler request e))))))
 
 (defn wrap-transfer-flash-to-api [handler]
   (fn [request]
@@ -74,7 +78,7 @@
 (defn wrap-add-api-version [handler]
   (fn [request]
     (when-let [response (handler request)]
-      (assoc-in response [:body :version] @api/version))))
+      (assoc-in response [:body :version] (api/version)))))
 
 (defn wrap-ajax [handler]
   (-> handler

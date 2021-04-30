@@ -10,10 +10,6 @@
     [c3kit.wire.websocketc :as wsc]
     ))
 
-(def app-handlers-var (atom nil))
-(defn install-handlers! [handlers]
-  (reset! app-handlers-var handlers))
-
 (def server (app/resolution :ws/server))
 
 (defn connected-ids [] (set (keys (:connections @@server))))
@@ -46,10 +42,9 @@
 (def handler-cache (atom {}))
 
 (defn resolve-handler [id]
-  (if @app-handlers-var
-    (let [app-actions @(util/resolve-var @app-handlers-var)]
-      (when-let [action-sym (or (get app-actions id) (get default-handlers id))]
-        (util/resolve-var action-sym)))
+  (if-let [app-actions (util/var-value (:ws-handlers @api/config))]
+    (when-let [action-sym (or (get app-actions id) (get default-handlers id))]
+      (util/resolve-var action-sym))
     (do (log/warn "app-handler-var has not been set")
         (when-let [action-sym (get default-handlers id)]
           (util/resolve-var action-sym)))))
@@ -101,7 +96,7 @@
 (defn wrap-add-api-version [handler]
   (fn [msg]
     (let [result (handler msg)]
-      (assoc result :version @api/version))))
+      (assoc result :version (api/version)))))
 
 (def message-handler (-> dispatch-message
                          wrap-catch-errors

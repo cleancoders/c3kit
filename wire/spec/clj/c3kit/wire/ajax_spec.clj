@@ -1,9 +1,8 @@
 (ns c3kit.wire.ajax-spec
   (:require
-    [c3kit.wire.ajax :as ajax]
+    [c3kit.apron.log :as log]
     [c3kit.wire.ajax :as sut]
     [c3kit.wire.api :as api]
-    [c3kit.wire.apic :as apic]
     [c3kit.wire.flashc :as flashc]
     [speclj.core :refer :all]
     ))
@@ -25,11 +24,41 @@
         (should= true (-> response :body :flash first flashc/success?))))
 
     (it "adds version to response"
-      (with-redefs [api/version (atom "123")]
-        (let [handler #(ajax/ok %)
-              wrapped (sut/wrap-add-api-version handler)
-              response (wrapped :foo)]
-          (should= "123" (-> response :body :version)))))
+      (api/configure! :version "123")
+      (let [handler #(sut/ok %)
+            wrapped (sut/wrap-add-api-version handler)
+            response (wrapped :foo)]
+        (should= "123" (-> response :body :version))))
+
+    )
+
+  (context "on-error"
+
+    (with-stubs)
+
+    (it "default"
+      (api/configure! :ajax-on-ex nil)
+      (with-redefs [c3kit.wire.ajax/default-ajax-ex-handler (stub :ex-handler)]
+        (let [wrapped (sut/wrap-catch-api-errors (fn [r] (throw (Exception. "test"))))]
+          (wrapped {:method :test})))
+      (should-have-invoked :ex-handler))
+
+    (it "default handler"
+      (api/configure! :ajax-on-ex 'c3kit.wire.ajax/default-ajax-ex-handler)
+      (log/capture-logs
+        (let [wrapped (sut/wrap-catch-api-errors (fn [r] (throw (Exception. "test"))))
+              response (wrapped {:method :test})]
+          (should= 200 (:status response))
+          (should= :error (sut/status response))
+          (should= "Our apologies. An error occurred and we have been notified." (-> response :body :flash first :text))
+          (should= :error (-> response :body :flash first :level))))
+      (should= "java.lang.Exception: test" (log/captured-logs-str)))
+
+    (it "customer handler fn"
+      (api/configure! :ajax-on-ex (stub :custom-ex-handler))
+      (let [wrapped (sut/wrap-catch-api-errors (fn [r] (throw (Exception. "test"))))]
+        (wrapped {:method :test}))
+      (should-have-invoked :custom-ex-handler))
 
     )
 
@@ -46,16 +75,16 @@
         (should= 200 (:status response))
         (should= :success (-> response :body :flash first flashc/level))
         (should= "Cool beans!" (-> response :body :flash first flashc/text))
-        (should= :ok (-> response ajax/status))
-        (should= :bar (-> response ajax/payload))))
+        (should= :ok (-> response sut/status))
+        (should= :bar (-> response sut/payload))))
 
     (it "fail"
       (let [response (sut/fail :fuzz-balz "Oh Noez!")]
         (should= 200 (:status response))
         (should= :error (-> response :body :flash first flashc/level))
         (should= "Oh Noez!" (-> response :body :flash first flashc/text))
-        (should= :fail (-> response ajax/status))
-        (should= :fuzz-balz (-> response ajax/payload))))
+        (should= :fail (-> response sut/status))
+        (should= :fuzz-balz (-> response sut/payload))))
     )
   )
 

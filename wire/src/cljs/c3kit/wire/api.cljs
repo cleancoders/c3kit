@@ -35,6 +35,10 @@
 (def new-version-flash (flashc/create :warn (list "There is a newer version of this app.  Please "
                                                   [:a {:href "#" :on-click #(cc/redirect! (cc/page-href))} "refresh"] ".") true))
 
+(defn new-version! [version]
+  (log/warn "new version: " version ", was: " (:version @config))
+  (flash/add! new-version-flash))
+
 ;; Options:    - extensible
 ;;  :after-all - a no-arg fn that is always invoked at the end of the entire call process
 ;;  :no-redirect - when truthy, redirect is ignored
@@ -43,12 +47,13 @@
 
 (defn handle-api-response [raw-response {:keys [handler options]}]
   (flash/remove! server-down-flash)
+  (log/trace "raw response: " raw-response)
   (let [response (apic/conform-response raw-response)
         {:keys [status flash payload version]} response]
     (when (seq flash)
       (doseq [f flash] (flash/add! f)))
     (when (not= version (:version @config))
-      (flash/add! new-version-flash))
+      (new-version! version))
     (when (#{:ok :redirect} status)
       (handle-payload handler payload))
     (when (and (= :redirect status) (not (:no-redirect options)))
