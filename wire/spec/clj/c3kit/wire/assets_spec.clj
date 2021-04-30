@@ -52,11 +52,11 @@
   ;(it "reuses known fingerprints"
   ;  (let [tally (atom 0)
   ;        path "/assets.clj"
-  ;        response (io/resource (str "poker" path))]
+  ;        response (io/resource (str "bucket" path))]
   ;    (with-redefs [io/resource (fn [p] (swap! tally inc) response)]
-  ;      (let [result (add-fingerprint path "poker")]
+  ;      (let [result (add-fingerprint path "bucket")]
   ;        (should-not= path result)
-  ;        (should= result (add-fingerprint path "poker"))))
+  ;        (should= result (add-fingerprint path "bucket"))))
   ;    (should= 1 @tally)))
 
   (it "ignored requests without finger prints"

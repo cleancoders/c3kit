@@ -15,11 +15,13 @@
   (api/create-database uri)
   (api/connect uri))
 
-(defn load-config [] (util/read-edn-resource "config/datomic.edn"))
+(defn read-config [] (util/read-edn-resource "config/datomic.edn"))
+
+(def config (atom {}))
 
 (defn start [app]
-  (let [config (load-config)
-        uri (:uri config)]
+  (swap! config merge (read-config))
+  (let [uri (:uri @config)]
     (log/info "Connecting to datomic at: " uri)
     (assoc app :datomic-connection (connect uri))))
 
@@ -31,11 +33,14 @@
 
 (defonce connection (app/resolution! :datomic-connection))
 
+(defn partition-name [] (or (:partition @config) :db.part/user))
+
 (defn partition-schema
   "Return transact-able form to add a partition with name"
-  [partition-name]
-  [{:db/id (name partition-name) :db/ident (keyword partition-name)}
-   [:db/add :db.part/db :db.install/partition (name partition-name)]])
+  ([] (partition-schema (partition-name)))
+  ([partition-name]
+   [{:db/id (name partition-name) :db/ident (keyword partition-name)}
+    [:db/add :db.part/db :db.install/partition (name partition-name)]]))
 
 (defn- apply-uniqueness [schema options]
   (if (:unique-value options)
@@ -125,7 +130,7 @@
   (or (:kind entity)
       (throw (Exception. (str ":kind missing for " entity)))))
 
-(defn tempid [] (api/tempid :poker))
+(defn tempid [] (api/tempid (partition-name)))
 (def tempid? (comp (fnil neg? 0) :idx))
 (def squuid api/squuid)
 

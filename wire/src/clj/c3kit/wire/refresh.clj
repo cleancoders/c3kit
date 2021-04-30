@@ -14,9 +14,11 @@
 
 (defonce excludes (atom #{}))
 (defonce services (atom []))
+(defonce prefix (atom nil))
 
-(defn init [s exclude-syms]
+(defn init [s ns-prefix exclude-syms]
   (reset! services s)
+  (reset! prefix "c3kit")
   (swap! excludes (fn [exs] (set (concat exs exclude-syms)))))
 
 ;; MDM : Copied from clojure.tools.namespace.dir because they're private.
@@ -63,7 +65,7 @@
 (defn scan [tracker]
   (let [files (->> (all-ns)
                    (map #(.name %))
-                   (filter #(str/starts-with? (name %) "poker"))
+                   (filter #(str/starts-with? (name %) @prefix))
                    (remove @excludes)
                    (map ns-to-file)
                    (remove nil?))

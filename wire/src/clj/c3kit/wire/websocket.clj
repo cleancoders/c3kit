@@ -36,7 +36,6 @@
 (def default-handlers {:ws/open  'c3kit.wire.websocket/log-message
                        :ws/close 'c3kit.wire.websocket/default-on-connection-closed
                        :ws/ping  'c3kit.wire.websocket/pong
-                       ;:ws/close 'poker.websocket-custom/client-closed-connection
                        })
 
 (def handler-cache (atom {}))

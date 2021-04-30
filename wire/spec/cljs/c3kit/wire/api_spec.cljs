@@ -3,16 +3,18 @@
                                         should-not= should-have-invoked after before with-stubs with around
                                         should-contain should-not-contain stub should-not-have-invoked should-have-invoked]])
   (:require
+    [c3kit.apron.corec :as ccc]
     [c3kit.wire.api :as sut]
-    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
     [c3kit.wire.flashc :as flashc]
-    [speclj.core]))
+    [c3kit.wire.js :as cc]
+    [speclj.core]
+    ))
 
 (def handler :undefined)
 (def call :undefined)
 
-(describe "AJAX"
+(describe "API"
 
   (with-stubs)
 
@@ -20,6 +22,7 @@
 
     (with handler (stub :handler))
     (with call {:handler @handler :options {}})
+    (around [it] (with-redefs [sut/new-version! (stub :new-version!)] (it)))
 
     (it "ok status invokes handler"
       (let [response {:status :ok :uri "/somewhere" :payload :payload}]
@@ -68,9 +71,17 @@
       (should= false (flash/active? sut/server-down-flash)))
 
     (it "version not current"
-      (sut/configure! "new")
+      (sut/configure! :version "new")
       (sut/handle-api-response {:status :ok :version "old"} @call)
-      (should= true (flash/active? sut/new-version-flash)))
+      (should-have-invoked :new-version!))
+
+    (it "version current"
+      (sut/configure! :version "new")
+      (sut/handle-api-response {:status :ok :version "new"} @call)
+      (should-not-have-invoked :new-version!)
+
+      (sut/handle-api-response {:status :ok :version nil} @call)
+      (should-not-have-invoked :new-version!))
 
     (it ":on-fail option"
       (let [call (assoc-in @call [:options :on-fail] (stub :on-fail))]

@@ -52,7 +52,7 @@
         {:keys [status flash payload version]} response]
     (when (seq flash)
       (doseq [f flash] (flash/add! f)))
-    (when (not= version (:version @config))
+    (when (and version (not= version (:version @config)))
       (new-version! version))
     (when (#{:ok :redirect} status)
       (handle-payload handler payload))

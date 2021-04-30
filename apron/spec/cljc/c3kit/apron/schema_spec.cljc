@@ -41,7 +41,7 @@
    :values [:wild :domestic]})
 
 (def now (new #?(:clj java.util.Date :cljs js/Date)))
-(def home #?(:clj (URI/create "http://poker.co") :cljs "http://poker.co"))
+(def home #?(:clj (URI/create "http://apron.co") :cljs "http://apron.co"))
 (def a-uuid #?(:clj (UUID/fromString "1f50be30-1373-40b7-acce-5290b0478fbe") :cljs (uuid "1f50be30-1373-40b7-acce-5290b0478fbe")))
 
 (def valid-pet {:species  "dog"
@@ -112,7 +112,7 @@
     (it "to uri"
       (should= nil (schema/->uri nil))
       (should= home (schema/->uri home))
-      (should= home (schema/->uri "http://poker.co"))
+      (should= home (schema/->uri "http://apron.co"))
       (should-throw schema/stdex (schema/->uri 123)))
 
     (it "to uuid"

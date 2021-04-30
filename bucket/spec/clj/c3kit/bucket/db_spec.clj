@@ -81,6 +81,23 @@
         (should-contain {:db/ident :thing/bar} schema)))
     )
 
+  (context "partition"
+
+    (it "default"
+      (reset! db/config {})
+      (should= :db.part/user (db/partition-name)))
+
+    (it "in config"
+      (reset! db/config {:partition :test})
+      (should= :test (db/partition-name)))
+
+    (it "schema"
+      (reset! db/config {:partition :test})
+      (should= [{:db/id "test", :db/ident :test} [:db/add :db.part/db :db.install/partition "test"]] (db/partition-schema))
+      (should= [{:db/id "newbie", :db/ident :newbie} [:db/add :db.part/db :db.install/partition "newbie"]] (db/partition-schema :newbie)))
+
+    )
+
   (context "CRUD"
 
     (helper/with-db-schemas [dbc-spec/bibelot])

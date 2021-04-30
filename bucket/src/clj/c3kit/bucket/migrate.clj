@@ -1,12 +1,12 @@
 (ns c3kit.bucket.migrate
   (:refer-clojure :exclude [remove])
   (:require
-    [clojure.string :as str]
-    [datomic.api :as api]
     [c3kit.apron.app :as app]
-    [c3kit.bucket.db :as db]
     [c3kit.apron.log :as log]
     [c3kit.apron.util :as util]
+    [c3kit.bucket.db :as db]
+    [clojure.string :as str]
+    [datomic.api :as api]
     ))
 
 (def applied-migrations #{})
@@ -66,10 +66,7 @@
 (defn init-migration-list []
   (when-not (attr-exists? :migration/name)
     (log/info "\tadding migration attribute")
-    ; Don't change partition.  All the data as been stored in the :db.part/user partition already.
-    ;(db/transact! (concat [(db/partition-schema :poker)] migration))
-    (db/transact! migration)
-    )
+    (db/transact! migration))
   (let [all-migrations (db/find-all :migration :name)]
     (alter-var-root #'applied-migrations into (map :name all-migrations))))
 
@@ -109,7 +106,7 @@
 (defn- db-enum-schema [schema] (:values schema))
 
 (defn db-schema
-  "converts the schema into format usable by poker.db "
+  "converts the schema into format usable by datomic c3kit.bucket.db"
   [schema]
   (cond
     (:kind schema) (db-entity-schema schema)
@@ -128,7 +125,7 @@
 
 (defn -main [& args]
   (try
-    (let [config (db/load-config)]
+    (let [config (db/read-config)]
       (init)
 
       (log/info!)

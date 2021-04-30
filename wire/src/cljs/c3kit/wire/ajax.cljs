@@ -58,9 +58,6 @@
 ;; gets called when a response has :status of :ok. The :payload can be anything.  Client code should know what data
 ;; to expect based on what it's asking for.
 ;;
-;;  *** It's important to note that the poker/schema/* is shared between the client and the server.  This means
-;;  *** that the shape of the data is always the SAME.  Both sides can validate/coerce/conform data to look identical.
-
 ;; Options:    - extensible
 ;;  :after-all - a no-arg fn that is always called at the end of the entire ajax process.
 ;;  :no-redirect - when truthy, redirect is ignored
