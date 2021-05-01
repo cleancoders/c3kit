@@ -10,15 +10,15 @@
     [clojure.string :as str]
     [clojure.tools.namespace.file :as file]
     [clojure.tools.namespace.reload :as reload]
-    ))
+    [c3kit.apron.corec :as ccc]))
 
 (defonce excludes (atom #{}))
 (defonce services (atom []))
-(defonce prefix (atom nil))
+(defonce prefix (atom "c3kit"))
 
 (defn init [s ns-prefix exclude-syms]
   (reset! services s)
-  (reset! prefix "c3kit")
+  (reset! prefix ns-prefix)
   (swap! excludes (fn [exs] (set (concat exs exclude-syms)))))
 
 ;; MDM : Copied from clojure.tools.namespace.dir because they're private.
