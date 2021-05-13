@@ -141,7 +141,7 @@
             full-schema @(util/resolve-var full-schema-var)
             schema (mapcat ->db-schema full-schema)]
         (log/info "Applying full schema. " (count schema) " attributes")
-        @(db/transact! schema))
+        @(db/transact! (concat (db/partition-schema) schema)))
       (log/info (str "Migration complete. " (count (db/current-schema)) " attributes found in schema.")))
 
     (System/exit 0)

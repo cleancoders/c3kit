@@ -3,6 +3,7 @@
     [c3kit.apron.log :as log]
     [c3kit.apron.time :as time :refer [seconds hours ago from-now]]
     [c3kit.bucket.bg :as bg]
+    [c3kit.bucket.bg-schema :as bg-schema]
     [c3kit.bucket.db :as db]
     [c3kit.bucket.spec-helper :as helper]
     [speclj.core :refer :all]
@@ -16,7 +17,7 @@
 
 (describe "Background"
 
-  (helper/with-db-schemas [bg/bg-task])
+  (helper/with-db-schemas [bg-schema/bg-task])
 
   (around [it]
     (with-redefs [bg/background (delay (:background @app))]

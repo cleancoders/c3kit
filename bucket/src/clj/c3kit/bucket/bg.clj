@@ -3,17 +3,9 @@
   (:require
     [c3kit.apron.app :as app]
     [c3kit.apron.log :as log]
-    [c3kit.apron.schema :as s]
     [c3kit.apron.time :as time]
     [c3kit.bucket.db :as db]
     ))
-
-(def bg-task
-  {:kind        (s/kind :bg-task)
-   :id          s/id
-   :key         {:type :keyword :db [:unique-identity]}
-   :last-ran-at {:type :instant :db [:no-history]}
-   })
 
 (defn start [app]
   (log/info "Starting background manager")

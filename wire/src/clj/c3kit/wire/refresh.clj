@@ -9,8 +9,7 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [clojure.tools.namespace.file :as file]
-    [clojure.tools.namespace.reload :as reload]
-    [c3kit.apron.corec :as ccc]))
+    [clojure.tools.namespace.reload :as reload]))
 
 (defonce excludes (atom #{}))
 (defonce services (atom []))

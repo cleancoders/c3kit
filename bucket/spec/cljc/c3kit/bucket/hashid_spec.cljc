@@ -24,5 +24,10 @@
     (should= "kV41EmPmEJe" (id->hash 999999999999999))
     (should= 999999999999999 (hash->id "kV41EmPmEJe")))
 
+  (it "crashing case"
+    (let [hash-fns (sut/hashid-fns "abcdefg" 30) ;; magic combo
+          ->id (:hash->id hash-fns)]
+      (should= nil (->id "blah"))))
+
   )
 
