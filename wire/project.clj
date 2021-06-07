@@ -1,4 +1,4 @@
-(defproject com.cleancoders.c3kit/wire "1.0.4"
+(defproject com.cleancoders.c3kit/wire "1.0.5"
 
   :description "Clean Coders Clojure (C3) Kit - Wire: Rich-client webapp tools."
   :url "https://cleancoders.com"
@@ -11,7 +11,9 @@
                  [http-kit "2.5.1"]
                  [org.clojure/clojure "1.10.3"]
                  [org.clojure/core.async "1.3.610"]
-                 [reagent "1.0.0-alpha2"]
+                 [reagent "1.1.0"]
+                 [cljsjs/react "17.0.2-0"]
+                 [cljsjs/react-dom "17.0.2-0"]
                  [ring/ring "1.8.1"]
                  ]
 
