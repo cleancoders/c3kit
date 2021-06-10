@@ -32,42 +32,50 @@
         (= 200 (:status response)) (api/handle-api-response (:body response) ajax-call)
         :else (handle-unknown response ajax-call)))
 
+(defn request-map [{:keys [options params] :as ajax-call}]
+  (let [request {:headers {"X-CSRF-Token" (:anti-forgery-token @api/config)}}]
+    (if (:form-data? options)
+      (let [form-data (js/FormData.)]
+        (doseq [[k v] params]
+          (.append form-data (name k) v))
+        (assoc request :body form-data))
+      (assoc request :query-params params))))
+
 (defn- do-ajax-request [{:keys [method method-fn url params] :as ajax-call}]
   (log/debug "<" method url params)
   (go
     (swap! active-ajax-requests inc)
-    (let [response (async/<! (method-fn url {:query-params params
-                                             :headers      {"X-CSRF-Token" (:anti-forgery-token @api/config)}}))]
-      (log/debug ">" method url (:error-code response) (:status response) (:status (:body response)))
-      (triage-response response ajax-call)
-      (swap! active-ajax-requests dec))))
+    (let [response (async/<! (method-fn url (request-map ajax-call)))]
+        (log/debug ">" method url (:error-code response) (:status response) (:status (:body response)))
+        (triage-response response ajax-call)
+        (swap! active-ajax-requests dec))))
 
-(defn build-ajax-call [method method-fn url params handler opt-args]
-  {:options   (ccc/->options opt-args)
-   :method    method
-   :method-fn method-fn
-   :url       url
-   :params    params
-   :handler   handler})
+  (defn build-ajax-call [method method-fn url params handler opt-args]
+    {:options   (ccc/->options opt-args)
+     :method    method
+     :method-fn method-fn
+     :url       url
+     :params    params
+     :handler   handler})
 
-;; MDM - do-get and do-post
-;; These functions initiate ajax calls to the server and conform to a semi-formal API.
-;; Requests are simple: get or post to a URL with query params.
-;; Responses from the server are a map described by the response-schema above.
-;; Every call to do-get or do-post must include a handler function that takes one argument, the response :payload.  It
-;; gets called when a response has :status of :ok. The :payload can be anything.  Client code should know what data
-;; to expect based on what it's asking for.
-;;
-;; Options:    - extensible
-;;  :after-all - a no-arg fn that is always called at the end of the entire ajax process.
-;;  :no-redirect - when truthy, redirect is ignored
+  ;; MDM - do-get and do-post
+  ;; These functions initiate ajax calls to the server and conform to a semi-formal API.
+  ;; Requests are simple: get or post to a URL with query params.
+  ;; Responses from the server are a map described by the response-schema above.
+  ;; Every call to do-get or do-post must include a handler function that takes one argument, the response :payload.  It
+  ;; gets called when a response has :status of :ok. The :payload can be anything.  Client code should know what data
+  ;; to expect based on what it's asking for.
+  ;;
+  ;; Options:    - extensible
+  ;;  :after-all - a no-arg fn that is always called at the end of the entire ajax process.
+  ;;  :no-redirect - when truthy, redirect is ignored
 
-(defn get! [url params handler & opt-args]
-  (do-ajax-request (build-ajax-call "GET" http/get url params handler opt-args)))
+  (defn get! [url params handler & opt-args]
+    (do-ajax-request (build-ajax-call "GET" http/get url params handler opt-args)))
 
-(defn post! [url params handler & opt-args]
-  (do-ajax-request (build-ajax-call "POST" http/post url params handler opt-args)))
+  (defn post! [url params handler & opt-args]
+    (do-ajax-request (build-ajax-call "POST" http/post url params handler opt-args)))
 
-(defn save-destination [dest]
-  (post! "/api/v1/save-destination" {:destination dest} #(log/info "destination saved: " %)))
+  (defn save-destination [dest]
+    (post! "/api/v1/save-destination" {:destination dest} #(log/info "destination saved: " %)))
 
