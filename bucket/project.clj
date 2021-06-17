@@ -1,11 +1,11 @@
-(defproject com.cleancoders.c3kit/bucket "1.0.3"
+(defproject com.cleancoders.c3kit/bucket "1.0.4"
 
   :description "Clean Coders Clojure (C3) Kit - Bucket: Database API for datomic and in-memory."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.1"]
+                 [com.cleancoders.c3kit/apron "1.0.2bin/de"]
                  [cljsjs/hashids "1.0.2-0"]
                  [jstrutz/hashids "1.0.1"]
                  [org.clojure/clojure "1.10.3"]

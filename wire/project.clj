@@ -1,11 +1,11 @@
-(defproject com.cleancoders.c3kit/wire "1.0.6"
+(defproject com.cleancoders.c3kit/wire "1.0.7"
 
   :description "Clean Coders Clojure (C3) Kit - Wire: Rich-client webapp tools."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.1"]
+                 [com.cleancoders.c3kit/apron "1.0.2"]
                  [com.cleancoders.c3kit/scaffold "1.0.0"]
                  [cljs-http/cljs-http "0.1.46"]
                  [http-kit "2.5.1"]

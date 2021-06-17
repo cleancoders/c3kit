@@ -107,7 +107,8 @@
       (should= now (schema/->date now))
       (should= now (schema/->date (.getTime now)))
       ;(should-be-a #+clj java.util.Date #+cljs js/Date (schema/->date (clj-time/now)))
-      (should-throw schema/stdex (schema/->date "now")))
+      (should-throw schema/stdex (schema/->date "now"))
+      (should= now (schema/->date (pr-str now))))
 
     (it "to uri"
       (should= nil (schema/->uri nil))

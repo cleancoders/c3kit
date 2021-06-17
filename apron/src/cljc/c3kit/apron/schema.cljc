@@ -3,6 +3,7 @@
   (:refer-clojure :exclude [uri?])
   (:require
     [c3kit.apron.corec :as ccc]
+    [clojure.edn :as edn]
     [clojure.string :as str]
     #?(:cljs [com.cognitect.transit.types]) ;; https://github.com/cognitect/transit-cljs/issues/41
     ))
@@ -119,6 +120,7 @@
     (integer? v) (doto (new #?(:clj java.util.Date :cljs js/Date)) (.setTime v))
     ;#?(:clj (instance? org.joda.time.DateTime v)) #?(:clj (java.util.Date. (.getMillis v)))
     #?(:cljs (instance? goog.date.Date v)) #?(:cljs (js/Date. (.getTime v)))
+    (and (string? v) (str/starts-with? v "#inst")) (edn/read-string v)
     :else (throw (coerce-ex v "date"))))
 
 (defn ->uri [v]
