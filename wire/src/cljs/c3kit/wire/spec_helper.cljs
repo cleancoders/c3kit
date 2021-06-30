@@ -41,14 +41,14 @@
   ([selector] (select js/document selector))
   ([root selector]
    (assert root (str "select: can't select inside nil nodes. " selector))
-   (assert (string? selector) ("select: selector must be a string!: " selector))
+   (assert (string? selector) (str "select: selector must be a string!: " selector))
    (.querySelector root selector)))
 
 (defn select-all
   ([sel] (select-all js/document sel))
   ([root selector]
    (assert root (str "select-all: can't select inside nil nodes. " selector))
-   (assert (string? selector) ("select-all: selector must be a string!: " selector))
+   (assert (string? selector) (str "select-all: selector must be a string!: " selector))
    (let [results (.querySelectorAll root selector)
          slice #(.call js/Array.prototype.slice %)]
      (into [] (slice results)))))
