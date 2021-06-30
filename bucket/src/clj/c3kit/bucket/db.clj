@@ -342,13 +342,15 @@
   (let [id (if-let [id? (:id id-or-e)] id? id-or-e)]
     (transact! [{:db/excise id}])))
 
-(def reserved-attr-nses #{"db" "db.alter" "db.bootstrap" "db.cardinality" "db.excise" "db.fn" "db.install"
-                          "db.lang" "db.part" "db.sys" "db.type" "db.unique" "fressian" "deleted" "garbage"})
+(def reserved-attr-nses #{"db" "db.alter" "db.attr" "db.bootstrap" "db.cardinality" "db.entity" "db.excise" "db.fn"
+                          "db.install" "db.lang" "db.part" "db.sys" "db.type" "db.unique" "fressian" "deleted" "garbage"})
 (defn current-schema
   "Returns a list of all the fully qualified fields in the schema."
   []
-  (filter #(not (reserved-attr-nses (namespace %)))
-          (map first (api/q '[:find ?ident :where [?e :db/ident ?ident]] (db)))))
+  (->> (api/q '[:find ?ident :where [?e :db/ident ?ident]] (db))
+       (map first)
+       (filter #(not (reserved-attr-nses (namespace %))))
+       sort))
 
 (defn garbage-idents
   "Returns a list of all the idents starting with :garbage."

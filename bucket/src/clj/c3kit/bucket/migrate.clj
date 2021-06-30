@@ -22,17 +22,20 @@
 (def migration (db/build-schema :migration [[:name :string :unique]]))
 
 (defn add [new type & spec]
-  (when-not (attr-exists? new)
-    (log/info (str "\tadding " new))
-    (let [kind (keyword (namespace new))
-          attr-name (keyword (name new))
-          attr (db/build-attribute kind (concat [attr-name type] spec))]
-      (db/transact! [attr]))))
+  (if (attr-exists? new)
+    (log/warn "\tadd: SKIPPING " new)
+    (do
+      (log/info (str "\tadding " new))
+      (let [kind (keyword (namespace new))
+            attr-name (keyword (name new))
+            attr (db/build-attribute kind (concat [attr-name type] spec))]
+        (db/transact! [attr])))))
 
 (defn rename [old new]
-  (when-let [old-id (schema-attr-id old)]
-    (log/info (str "\trenaming " old " to " new))
-    (db/transact! [{:db/id old-id :db/ident new}])))
+  (if-let [old-id (schema-attr-id old)]
+    (do (log/info (str "\trenaming " old " to " new))
+        (db/transact! [{:db/id old-id :db/ident new}]))
+    (log/warn "\trename FAILED: MISSING " old)))
 
 (defn entity-values [e-id attr]
   (let [e (api/entity (db/db) e-id)
@@ -54,10 +57,12 @@
                 (map db/transact!)))))
 
 (defn remove [attr]
-  (when-let [attr-id (schema-attr-id attr)]
-    (log/info (str "\tremoving " attr " (" attr-id ")"))
-    (let [new-name (keyword "garbage" (str (namespace attr) "." (name attr) "_" (System/currentTimeMillis)))]
-      (db/transact! [{:db/id attr-id :db/ident new-name}]))))
+  (if-let [attr-id (schema-attr-id attr)]
+    (do
+      (log/info (str "\tremoving " attr " (" attr-id ")"))
+      (let [new-name (keyword "garbage" (str (namespace attr) "." (name attr) "_" (System/currentTimeMillis)))]
+        (db/transact! [{:db/id attr-id :db/ident new-name}])))
+    (log/warn "\tremove: MISSING " attr)))
 
 (defn retract-remove [attr]
   (retract-attribute-values attr)
