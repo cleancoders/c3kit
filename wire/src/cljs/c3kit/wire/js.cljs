@@ -1,5 +1,8 @@
 (ns c3kit.wire.js
-  (:import [goog History]))
+  (:import [goog History])
+  (:require
+    [goog.object :as gobject]
+    [c3kit.apron.log :as log]))
 
 ; Key Codes
 (def BACKSPACE 8)
@@ -61,9 +64,20 @@
 
 (defn print-page [] (.print js/window))
 
+(defn o-get
+  ([js-obj key] (gobject/get js-obj key nil))
+  ([js-obj key default] (gobject/get js-obj key default)))
+
+(defn o-set [js-obj key value] (gobject/set js-obj key value))
+
 (defn e-target [e] (.-target e))
 (defn e-text [e] (-> e .-target .-value))
+(defn e-type [e] (-> e .-type))
 (defn e-checked? [e] (-> e .-target .-checked))
+(defn e-coordinates [e] [(.-clientX e) (.-clientY e)])
+(defn e-left-click? [e] (= 0 (o-get e "button")))
+(defn e-wheel-click? [e] (= 1 (o-get e "button")))
+(defn e-right-click? [e] (= 2 (o-get e "button")))
 
 (defn focus! [node] (when node (.focus node)))
 
@@ -74,31 +88,61 @@
     (nod e)
     (apply a-fn args)))
 
-(defn page-title [] (.-title js/document))
-(defn page-title= [title] (set! (.-title js/document) title))
+
+(defn document ([] js/document) ([node] (.-ownerDocument node)))
+(defn doc-body [doc] (.-body doc))
 (defn doc-ready-state [] (.-readyState js/document))
 (defn doc-ready? [] (= "complete" (doc-ready-state)))
+
+(defn window-open [url window-name options-string] (.open js/window url window-name options-string))
+(defn window-close! [] (.close js/window))
+
+(defn frame-window [iframe] (.-contentWindow iframe))
+
+(defn page-title [] (.-title js/document))
+(defn page-title= [title] (set! (.-title js/document) title))
 (defn page-href [] (-> js/window .-location .-href))
 (defn page-reload! [] (.reload (.-location js/window)))
-(defn uri-encode [& stuff] (js/encodeURIComponent (apply str stuff)))
-(defn open-window [url window-name options-string] (.open js/window url window-name options-string))
-(defn frame-window [iframe] (.-contentWindow iframe))
-(defn post-message [window message target-domain] (.postMessage window (clj->js message) target-domain))
-(defn register-post-message-handler [handler] (.addEventListener js/window "message" handler))
-(defn register-storage-handler [handler] (.addEventListener js/window "storage" handler))
-(defn screen-size [] [(.-width js/screen) (.-height js/screen)])
+
+(defn node-id [node] (o-get node "id"))
+(defn node-id= [node id] (o-set node "id" id))
 (defn node-width [node] (.-clientWidth node))
 (defn node-height [node] (.-clientHeight node))
 (defn node-size [node] [(node-width node) (node-height node)])
 (defn node-value [node] (.-value node))
+(defn node-parent [node] (.-parentNode node))
+(defn node-children [node] (array-seq (.-childNodes node)))
+(defn node-clone [node deep?] (.cloneNode node deep?))
+(defn node-append-child [node child] (.appendChild node child))
+(defn node-remove-child [node child] (.removeChild node child))
+(defn node-style [node] (.-style node))
+(defn node-bounds [node]
+  (let [rect (.getBoundingClientRect node)]
+    [(.-x rect) (.-y rect) (.-width rect) (.-height rect)]))
+
+(defn uri-encode [& stuff] (js/encodeURIComponent (apply str stuff)))
+(defn post-message [window message target-domain] (.postMessage window (clj->js message) target-domain))
+(defn register-post-message-handler [handler] (.addEventListener js/window "message" handler))
+(defn register-storage-handler [handler] (.addEventListener js/window "storage" handler))
+(defn screen-size [] [(.-width js/screen) (.-height js/screen)])
 (defn element-by-id [id] (.getElementById js/document id))
-(defn add-listener [node event listener] (.addEventListener node event listener))
-(defn parent-node [node] (.-parentNode node))
-(defn child-nodes [node] (array-seq (.-childNodes node)))
 (defn context-2d [canvas] (.getContext canvas "2d"))
-(defn close-window! [] (.close js/window))
 (defn set-local-storage [key value] (.setItem js/localStorage key value))
 (defn remove-local-storage [key] (.removeItem js/localStorage key))
+
+(defn add-listener
+  ([node event listener] (add-listener node event listener nil))
+  ([node event listener options]
+   (if node
+     (.addEventListener node event listener (when options (clj->js options)))
+     (log/warn "add-listener to nil node"))))
+
+(defn remove-listener
+  ([node event listener] (remove-listener node event listener nil))
+  ([node event listener options]
+   (if node
+     (.removeEventListener node event listener (when options (clj->js options)))
+     (log/warn "remove-listener to nil node"))))
 
 (defn download [url filename]
   (let [a (.createElement js/document "a")]

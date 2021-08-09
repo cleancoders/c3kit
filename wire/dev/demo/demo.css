@@ -1,0 +1,43 @@
+body {
+    font-family: verdana, sans-serif;
+}
+
+.demo-container {
+    border-top: 1px solid black;
+    padding-top: 5px;
+}
+
+h2 {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.hidden {
+    display: none;
+}
+
+#golf-green {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    background-color: darkolivegreen;
+    border: 1px solid darkslateblue;
+}
+
+.golf-ball {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: orange;
+    z-index: 2;
+}
+
+#golf-hole {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    background-color: black;
+    z-index: 1;
+}
