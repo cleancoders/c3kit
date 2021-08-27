@@ -6,7 +6,7 @@
     [c3kit.wire.api :as api]
     [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
-    [cljs-http.client :as http]
+    [cljs-http.client :as http]                             ;; TODO - MDM: switch to httpkit
     [cljs.core.async :as async]
     [reagent.core :as reagent]
     ))
@@ -39,7 +39,8 @@
         (doseq [[k v] params]
           (.append form-data (name k) v))
         (assoc request :body form-data))
-      (assoc request :query-params params))))
+      (assoc request :query-params params))))               ;; TODO - MDM: Should be :form-params for post request
+
 
 (defn- do-ajax-request [{:keys [method method-fn url params] :as ajax-call}]
   (log/debug "<" method url params)

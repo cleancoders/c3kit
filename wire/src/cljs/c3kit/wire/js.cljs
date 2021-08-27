@@ -116,6 +116,8 @@
 (defn node-append-child [node child] (.appendChild node child))
 (defn node-remove-child [node child] (.removeChild node child))
 (defn node-style [node] (.-style node))
+(defn node-add-class [node class] (.add (.-classList node) class))
+(defn node-remove-class [node class] (.remove (.-classList node) class))
 (defn node-bounds [node]
   (let [rect (.getBoundingClientRect node)]
     [(.-x rect) (.-y rect) (.-width rect) (.-height rect)]))

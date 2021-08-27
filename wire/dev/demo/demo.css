@@ -16,12 +16,13 @@ h2 {
     display: none;
 }
 
-#golf-green {
+.golf-green {
     position: relative;
     width: 500px;
     height: 500px;
-    background-color: darkolivegreen;
+    background: linear-gradient(forestgreen, darkolivegreen);
     border: 1px solid darkslateblue;
+    margin-right: 20px;
 }
 
 .golf-ball {
@@ -33,11 +34,31 @@ h2 {
     z-index: 2;
 }
 
-#golf-hole {
+.dragging-ball {
+    filter: drop-shadow(5px 5px 5px #00000080);
+    cursor: grabbing !important;
+    overflow: hidden;
+}
+
+.grab {
+    cursor: grab;
+}
+
+.golf-hole {
     position: absolute;
     width: 30px;
     height: 30px;
     border-radius: 15px;
     background-color: black;
     z-index: 1;
+}
+
+.hole-hover {
+    background: radial-gradient(black, white);
+}
+
+.golf-scroller {
+    width: 350px;
+    height: 350px;
+    overflow: scroll;
 }

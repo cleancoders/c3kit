@@ -14,57 +14,56 @@
 
 (def golf-state (reagent/atom (assoc (golf-locations) :score 0)))
 
-;(defn golf-drag-started [e]
-;  (let [[green-x green-y _ _] (wjs/client-bounds (wjs/element-by-id "golf-green"))
-;        [_ _ ball-w ball-h] (wjs/client-bounds (wjs/element-by-id "golf-ball"))]
-;    (swap! golf-state assoc :offset [(+ green-x (/ ball-w 2)) (+ green-y (/ ball-h 2))])))
-
-;(defn move-ball [{:keys [browser-event]}]
-;  (let [[client-x client-y] (wjs/e-coordinates browser-event)]
-;    (swap! golf-state (fn [state]
-;                        (let [[offset-x offset-y] (:offset state)
-;                              left (max 0 (- client-x offset-x))
-;                              top (max 0 (- client-y offset-y))]
-;                          (assoc state :ball-location {:left left :top top}))))))
-
-;(defn golf-drop [_]
-;  (println "drop")
-;  (swap! golf-state #(-> %
-;                         (merge (golf-locations))
-;                         (update :score inc))))
-
-(defn golf-drag-started [e] (swap! golf-state assoc :dragging? true))
-(defn move-ball [{:keys [browser-event]}])
-(defn show-ball [_] (swap! golf-state dissoc :dragging?))
+(defn golf-drag-started [{:keys [source-key]}] (swap! golf-state assoc :dragging source-key :hover nil))
+(defn golf-drag-end [] (swap! golf-state dissoc :dragging :hover :drop-hole))
 (defn golf-drop [_]
-  (println "drop")
   (swap! golf-state #(-> %
                          (merge (golf-locations))
                          (update :score inc))))
+(defn drag-over [{:keys [target-key]}] (swap! golf-state assoc :drop-hole target-key))
+(defn drag-out [_] (swap! golf-state dissoc :drop-hole))
 
 (def golf-dnd (-> (dnd/context)
                   (dnd/add-group :ball)
                   (dnd/add-group :hole)
                   (dnd/drag-from-to :ball :hole)
                   (dnd/on-drag-start :ball golf-drag-started)
-                  (dnd/on-drag :ball move-ball)
+                  ;(dnd/on-drag :ball move-ball)
                   (dnd/on-drop :hole golf-drop)
-                  (dnd/on-drag-end :ball show-ball)
+                  (dnd/on-drag-end :ball golf-drag-end)
                   (dnd/on-drag-over :ball #(println "ball drag-over"))
-                  (dnd/on-drag-over :hole #(println "hole drag-over"))
+                  (dnd/on-drag-over :hole drag-over)
                   (dnd/on-drag-out :ball #(println "ball drag-out"))
-                  (dnd/on-drag-out :hole #(println "hole drag-out"))
-                  ))
+                  (dnd/on-drag-out :hole drag-out)
+                  (dnd/set-drag-class :ball "dragging-ball")))
 
 (defn golf-demo []
   [:div#golf-demo.demo-container
    [:h2 "Golf Demo"]
    [:p "Drag the ball into the hole.  Score: " (:score @golf-state)]
-   [:div#golf-green
-    (when-not (:dragging? @golf-state)
-      [:div#golf-ball.golf-ball {:style (:ball-location @golf-state) :ref (dnd/register golf-dnd :ball :the-ball)}])
-    [:div#golf-hole {:style (:hole-location @golf-state) :ref (dnd/register golf-dnd :hole :the-hole)
-                     :on-mouse-over #(println "mouseover")}]]])
+   [:div {:style {:display "flex"}}
+    [:div.golf-green
+     (when-not (= :ball-1 (:dragging @golf-state))
+       [:div.golf-ball {:style          (:ball-location @golf-state)
+                        :on-mouse-enter #(swap! golf-state assoc :hover :ball-1)
+                        :on-mouse-leave #(swap! golf-state dissoc :hover)
+                        :class          (when (= :ball-1 (:hover @golf-state)) "grab")
+                        :ref            (dnd/register golf-dnd :ball :ball-1)}])
+     [:div.golf-hole {:style (:hole-location @golf-state)
+                      :class (when (= :hole-1 (:drop-hole @golf-state)) "hole-hover")
+                      :on-mouse-enter #(println "hole mouse enter")
+                      :ref   (dnd/register golf-dnd :hole :hole-1)}]]
+    [:div.golf-scroller
+     [:div.golf-green
+      (when-not (= :ball-2 (:dragging @golf-state))
+        [:div.golf-ball {:style          (:ball-location @golf-state)
+                         :on-mouse-enter #(swap! golf-state assoc :hover :ball-2)
+                         :on-mouse-leave #(swap! golf-state dissoc :hover)
+                         :class          (when (= :ball-2 (:hover @golf-state)) "grab")
+                         :ref            (dnd/register golf-dnd :ball :ball-2)}])
+      [:div.golf-hole {:style (:hole-location @golf-state)
+                       :class (when (= :hole-2 (:drop-hole @golf-state)) "hole-hover")
+                       :ref   (dnd/register golf-dnd :hole :hole-2)}]]]]])
 
 (defn content []
   [:div

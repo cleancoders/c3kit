@@ -13,16 +13,16 @@
 (def drag-threshold 5)
 
 (def dnd-structure
-  {:groups      {:group-key-1 {:members   {:member-key-1 {:id       "dom id of node"
-                                                          :node     "dom node"
-                                                          :listener "mousedown listener to start drag"}}
-                               :targets   #{"target group keys"}
-                               :listeners {:drag-start ["drag event handlers"]
-                                           :drag       ["drag event handlers"]
-                                           :drag-over  ["drag event handlers"]
-                                           :drag-out   ["drag event handlers"]
-                                           :drop       ["drag event handlers"]
-                                           :drag-end   ["drag event handlers"]}}}
+  {:groups      {:group-key-1 {:members    {:member-key-1 {:node     "dom node"
+                                                           :listener "mousedown listener to start drag"}}
+                               :targets    #{"target group keys"}
+                               :drag-class "css class that will be added to drag-node when being dragged"
+                               :listeners  {:drag-start ["drag event handlers"]
+                                            :drag       ["drag event handlers"]
+                                            :drag-over  ["drag event handlers"]
+                                            :drag-out   ["drag event handlers"]
+                                            :drop       ["drag event handlers"]
+                                            :drag-end   ["drag event handlers"]}}}
    :maybe-drag  {:start-position    [1 2]                   ;; [x y]
                  :group             "group key"
                  :member            "member key"
@@ -71,17 +71,20 @@
         drag-style (wjs/node-style drag-node)
         [x y] (wjs/e-coordinates js-event)
         [offset-x offset-y] offset]
-    (set! (.-left drag-style) (str (- x offset-x) "px"))
-    (set! (.-top drag-style) (str (- y offset-y) "px"))))
+    (wjs/o-set drag-style "left" (str (- x offset-x) "px"))
+    (wjs/o-set drag-style "top" (str (- y offset-y) "px"))))
 
 (defn- in-bounds? [x y [left right top bottom _ _]] (and (>= x left) (< x right) (>= y top) (< y bottom)))
 
-(defn- dispatch-drag-over-out [dnd group member node drop-target js-event event-type]
+(defn- targeted-drag-event [dnd group member node drop-target js-event]
   (let [[_ _ _ _ target-group target-member] drop-target
-        target-node (get-in @dnd [:groups target-group :members target-member :node])
-        drag-over-event (drag-event group member node target-group target-member target-node js-event)]
-    (and (dispatch-event dnd group event-type drag-over-event)
-         (dispatch-event dnd target-group event-type drag-over-event))))
+        target-node (get-in @dnd [:groups target-group :members target-member :node])]
+    (drag-event group member node target-group target-member target-node js-event)))
+
+(defn- dispatch-drag-over-out [dnd group member node drop-target js-event event-type]
+  (let [event (targeted-drag-event dnd group member node drop-target js-event)]
+    (and (dispatch-event dnd group event-type event)
+         (dispatch-event dnd (:target-group event) event-type event))))
 
 (defn maybe-drag-out [dnd js-event]
   (let [{:keys [group member node drop-target]} (:active-drag @dnd)]
@@ -111,14 +114,16 @@
       (maybe-drag-over dnd js-event))))
 
 (defn end-drag [dnd js-event]
-  (println "end-drag")
-  (let [{:keys [group member node drag-node document drag-listener end-listener]} (:active-drag @dnd)
+  (let [{:keys [group member node drag-node document drag-listener end-listener drop-target]} (:active-drag @dnd)
         drag-end-event (drag-event group member node js-event)]
     (wjs/remove-listener document "mousemove" drag-listener)
     (wjs/remove-listener document "touchmove" drag-listener)
     (wjs/remove-listener document "mouseup" end-listener)
     (wjs/remove-listener document "touchend" end-listener)
     (wjs/node-remove-child (wjs/doc-body document) drag-node)
+    (when drop-target
+      (let [drop-event (targeted-drag-event dnd group member node drop-target js-event)]
+        (dispatch-event dnd (:target-group drop-event) :drop drop-event)))
     (dispatch-event dnd group :drag-end drag-end-event)))
 
 (defn- member->target [group-key [member-key {:keys [node]}]]
@@ -135,21 +140,23 @@
     (apply concat grouped-targets)))
 
 (defn start-drag [dnd group member node js-event]
-  (println "start-drag")
   (when (dispatch-event dnd group :drag-start (drag-event group member node js-event))
     (let [drag-handler (partial handle-drag dnd)
           end-handler (partial end-drag dnd)
           doc (wjs/document node)
+          drag-class (get-in @dnd [:groups group :drag-class])
           drag-node (wjs/node-clone node true)
           drag-style (wjs/node-style drag-node)
           dnd-state @dnd
           [start-x start-y] (-> dnd-state :maybe-drag :start-position)
           [node-x node-y _ _] (wjs/node-bounds node)
           offset [(- start-x node-x) (- start-y node-y)]
-          targets (build-targets dnd-state group)]
-      (prn "targets: " targets)
+          ;targets (build-targets dnd-state group)
+          ]
       (wjs/node-id= drag-node "_dragndrop-drag-node_")
-      (set! (.-position drag-style) "absolute")
+      (wjs/o-set drag-style "position" "absolute")
+      (wjs/o-set drag-style "pointer-events" "none") ;; allow wheel events to scroll containers, but prevents mouse-over
+      (when drag-class (wjs/node-add-class drag-node drag-class))
       (wjs/node-append-child (wjs/doc-body doc) drag-node)
 
       (wjs/add-listener doc "mousemove" drag-handler)
@@ -165,7 +172,8 @@
                                      :document      doc
                                      :drag-listener drag-handler
                                      :end-listener  end-handler
-                                     :targets       targets})
+                                     ;:targets       targets
+                                     })
       (update-drag-node-position dnd js-event)))
   ;this.recalculateDragTargets();
   ;this.recalculateScrollableContainers();
@@ -177,7 +185,7 @@
   )
 
 
-(defn end-maybe-drag [dnd e]
+(defn end-maybe-drag [dnd _]
   (when-let [maybe-drag (:maybe-drag @dnd)]
     (println "end-maybe-drag")
     (let [{:keys [document node mouse-up-listener move-listener]} maybe-drag]
@@ -215,14 +223,12 @@
 
 (defn register [dnd group member]
   (fn [node]
-    (prn "register: " group member node)
     (when-not (get-in @dnd [:groups group]) (log/warn "registering to unknown group:" group member))
     (if node
-      (let [node-id (wjs/node-id node)
-            listener (partial mouse-down dnd group member node)]
-        (when-not node-id (throw (ex-info "registered dragndrop nodes must have an id" {:group group :member member})))
+      (let [listener (partial mouse-down dnd group member node)]
+        ;(when-not node-id (throw (ex-info "registered dragndrop nodes must have an id" {:group group :member member})))
         (wjs/add-listener node "mousedown" listener)
-        (swap! dnd assoc-in [:groups group :members member] {:id node-id :node node :listener listener}))
+        (swap! dnd assoc-in [:groups group :members member] {:node node :listener listener}))
       (let [{:keys [node listener]} (get-in @dnd [:groups group :members member])]
         (wjs/remove-listener node "mousedown" listener)
         (swap! dnd update-in [:groups group :members] dissoc member)))))
@@ -248,8 +254,8 @@
 (defn on-drag-out [dnd group listener] (add-group-listener! dnd group :drag-out listener))
 (defn on-drag-end [dnd group listener] (add-group-listener! dnd group :drag-end listener))
 
-(defn set-drag-class [dnd group-key classname]
-  (.setDragClass (get-group dnd group-key) classname)
+(defn set-drag-class [dnd group classname]
+  (swap! dnd assoc-in [:groups group :drag-class] classname)
   dnd)
 
 (declare fake-hiccup->dom)
