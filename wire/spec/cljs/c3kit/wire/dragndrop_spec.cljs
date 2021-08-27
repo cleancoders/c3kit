@@ -13,3 +13,10 @@
 
 
   )
+
+
+;; TODO - MDM: Work within scrolling
+;; TODO - MDM: Add touch listeners so it works on mobile
+;; TODO - MDM: custom fake hiccup for dragged node
+;; TODO - MDM: Same-list, reordering
+;; TODO - MDM: Multiple list, transferring and ordering
