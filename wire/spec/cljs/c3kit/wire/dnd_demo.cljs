@@ -15,12 +15,12 @@
 (def golf-state (reagent/atom (assoc (golf-locations) :score 0)))
 
 (defn golf-drag-started [{:keys [source-key]}] (swap! golf-state assoc :dragging source-key :hover nil))
-(defn golf-drag-end [] (swap! golf-state dissoc :dragging :hover :drop-hole))
+(defn golf-drag-end []  (println "@golf-state: " @golf-state) (swap! golf-state dissoc :dragging :hover :drop-hole))
 (defn golf-drop [_]
   (swap! golf-state #(-> %
                          (merge (golf-locations))
                          (update :score inc))))
-(defn drag-over [{:keys [target-key]}] (swap! golf-state assoc :drop-hole target-key))
+(defn drag-over [{:keys [target-key]}] (println "target-key: " target-key) (swap! golf-state assoc :drop-hole target-key))
 (defn drag-out [_] (swap! golf-state dissoc :drop-hole))
 
 (def golf-dnd (-> (dnd/context)
@@ -49,6 +49,7 @@
                         :on-mouse-leave #(swap! golf-state dissoc :hover)
                         :class          (when (= :ball-1 (:hover @golf-state)) "grab")
                         :ref            (dnd/register golf-dnd :ball :ball-1)}])
+     (println "@golf-state: " @golf-state)
      [:div.golf-hole {:style (:hole-location @golf-state)
                       :class (when (= :hole-1 (:drop-hole @golf-state)) "hole-hover")
                       :on-mouse-enter #(println "hole mouse enter")
