@@ -17,6 +17,6 @@
 
 ;; TODO - MDM: Work within scrolling
 ;; TODO - MDM: Add touch listeners so it works on mobile
-;; TODO - MDM: custom fake hiccup for dragged node
+;; TODO - MDM: custom fake hiccup for dragged node - when drag starts use 'this' as fake-hiccup - look at original dnd for this
 ;; TODO - MDM: Same-list, reordering
 ;; TODO - MDM: Multiple list, transferring and ordering

@@ -38,6 +38,7 @@ h2 {
     filter: drop-shadow(5px 5px 5px #00000080);
     cursor: grabbing !important;
     overflow: hidden;
+    background-color: blueviolet;
 }
 
 .grab {

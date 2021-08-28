@@ -79,6 +79,12 @@
     (helper/click! "p > span")
     (should= [] @sut/state))
 
+  ;(it "touch the X button"
+  ;  (sut/add-error! "m1")
+  ;  (helper/flush)
+  ;  (helper/touch-start! "p > span")
+  ;  (should= [] @sut/state))
+
   (context "adding"
 
     (it "stored into order"

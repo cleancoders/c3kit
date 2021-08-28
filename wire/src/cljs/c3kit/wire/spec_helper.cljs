@@ -85,6 +85,26 @@
      node
      (throw (ex-info (str action " - can't find child node: " selector) {:action action :root root :selector selector})))))
 
+(defn touch-end
+  ([thing]
+   ((.-touchend simulator) (resolve-node :touchend thing)))
+  ([root selector]
+   (touch-end (resolve-node :touchend root selector))))
+
+(defn touch-end!
+  ([thing] (touch-end thing) (flush))
+  ([root selector] (touch-end root selector) (flush)))
+
+(defn touch-start
+  ([thing]
+   ((.-touchstart simulator) (resolve-node :touchstart thing)))
+  ([root selector]
+   (touch-start (resolve-node :touchstart root selector))))
+
+(defn touch-start!
+  ([thing] (touch-start thing) (flush))
+  ([root selector] (touch-start root selector) (flush)))
+
 (defn click
   ([thing]
    ((.-click simulator) (resolve-node :click thing)))

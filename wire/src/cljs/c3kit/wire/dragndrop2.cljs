@@ -32,23 +32,23 @@
 																	:document          "document dom node"
 																	:mouse-up-listener "a js event handler"
 																	:move-listener     "a js event handler"}
-			:active-drag {:group         "group key"
-																	:member        "member key"
-																	:node          "member dom node"
-																	:drag-node     "dom node being dragged"
-																	:offset        "[x y] offset between cursor and drag-node"
-																	:document      "document dom node"
+			:active-drag {:group        "group key"
+																	:member       "member key"
+																	:node         "member dom node"
+																	:drag-node    "dom node being dragged"
+																	:offset       "[x y] offset between cursor and drag-node"
+																	:document     "document dom node"
 																	;:drag-listener "a js event handler"
-																	:end-listener  "a js event handler"
+																	:end-listener "a js event handler"
 																	;:targets       [["left" "right" "top" "bottom" "group-key" "member-key"]] ;; for all targets
 																	;:targets       {"member-key" {:mouse-enter "handler"
 																	;																														:mouse-leave "handler"}}
 																	;:drop-target   ["left" "right" "top" "bottom" "group-key" "member-key"]
-																	:drop-target   ["group key" "member key"]
+																	:drop-target  ["group key" "member key"]
 																	}})
 
 (defn get-group [dnd group]
-		(if-let [group (get @dnd group)]
+		(if-let [group (get-in @dnd [:groups] group)]
 				group
 				(throw (ex-info (str "DnD group missing: " group) {:group group :dnd dnd}))))
 
@@ -116,9 +116,9 @@
 								{:keys [group member node]} (:active-drag state)]
 				(when (dispatch-event dnd group :drag (drag-event group member node js-event))
 						(update-drag-node-position dnd js-event)
-				;		(maybe-drag-out dnd js-event)
-					;	(maybe-drag-over dnd js-event)
-					 )))
+						;		(maybe-drag-out dnd js-event)
+						;	(maybe-drag-over dnd js-event)
+						)))
 
 (defn- dispatch-drag-over-out [dnd group member node target-group target-member target-node js-event event-type]
 		(let [event (drag-event group member node target-group target-member target-node js-event)]
@@ -208,6 +208,33 @@
 						(wjs/remove-listener document "mouseup" mouse-up-listener))
 				(swap! dnd dissoc :maybe-drag)))
 
+(defn touch-move [dnd group member node js-event]
+		(let [[start-x start-y] (-> @dnd :maybe-drag :start-position)
+								[x y] (wjs/e-coordinates js-event)
+								distance         (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
+								above-threshold? (> distance drag-threshold)
+								mouse-out?       (and (= "mouseout" (wjs/e-type js-event)) (= (-> @dnd :maybe-drag :node) (wjs/e-target js-event)))]
+				(when (or above-threshold? mouse-out?)
+						(do (start-drag dnd group member node js-event)
+								(end-maybe-drag dnd nil))
+						(wjs/nod js-event))))
+
+(defn draggable-touch-start [dnd group member node js-event]
+		(when (wjs/e-left-click? js-event)
+				(let [listener     (partial touch-move dnd group member node)
+										doc-listener (partial end-maybe-drag dnd)
+										doc          (wjs/document node)]
+						(wjs/add-listener node "touchmove" listener)
+						;(wjs/add-listener node "mouseout" listener)
+						;(wjs/add-listener doc "mouseup" doc-listener)
+						(swap! dnd assoc :maybe-drag {:start-position    (wjs/e-coordinates js-event)
+																																				:group             group
+																																				:member            member
+																																				:node              node
+																																				:document          doc
+																																				:mouse-up-listener doc-listener
+																																				:move-listener     listener}))))
+
 (defn mouse-move [dnd group member node js-event]
 		(let [[start-x start-y] (-> @dnd :maybe-drag :start-position)
 								[x y] (wjs/e-coordinates js-event)
@@ -237,17 +264,24 @@
 
 (defn maybe-make-draggable! [{:keys [node] :as data} dnd group member]
 		(if (seq (get-in @dnd [:groups group :targets]))
-				(let [listener (partial draggable-mouse-down dnd group member node)]
-						(wjs/add-listener node "mousedown" listener)
-						(assoc data :draggable-mousedown listener))
+				(let [mousedown  (partial draggable-mouse-down dnd group member node)
+										touchstart (partial draggable-touch-start dnd group member node)]
+						(wjs/add-listener node "mousedown" mousedown)
+						(wjs/add-listener node "touchstart" touchstart)
+						(assoc data :draggable-mousedown mousedown :draggable-touchstart touchstart))
 				data))
+
+(defn droppable-touch-end [dnd target-group target-member target-node js-event]
+		(when-let [{:keys [group member node]} (:active-drag @dnd)]
+				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-over)
+						(prn "drag-over success")
+						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
 
 (defn droppable-mouse-enter [dnd target-group target-member target-node js-event]
 		(when-let [{:keys [group member node]} (:active-drag @dnd)]
 				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-over)
 						(prn "drag-over success")
 						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
-
 
 (defn droppable-mouse-leave [dnd target-group target-member target-node js-event]
 		(when-let [{:keys [group member node]} (:active-drag @dnd)]
@@ -258,9 +292,11 @@
 (defn maybe-make-droppable! [{:keys [node] :as data} dnd group member]
 		(if (some #(contains? % group) (map :targets (vals (:groups @dnd))))
 				(let [mouseenter (partial droppable-mouse-enter dnd group member node)
-										mouseleave (partial droppable-mouse-leave dnd group member node)]
+										mouseleave (partial droppable-mouse-leave dnd group member node)
+										touchend (partial droppable-touch-end dnd group member node)]
 						(wjs/add-listener node "mouseenter" mouseenter)
 						(wjs/add-listener node "mouseleave" mouseleave)
+						(wjs/add-listener node "touchend" touchend)
 						(assoc data :droppable-mouseenter mouseenter :droppable-mouseleave mouseleave))
 				data))
 
@@ -273,11 +309,13 @@
 																										(maybe-make-droppable! dnd group member))]
 								;(when-not node-id (throw (ex-info "registered dragndrop nodes must have an id" {:group group :member member})))
 								(swap! dnd assoc-in [:groups group :members member] member-data))
-						(let [{:keys [node draggable-mousedown droppable-mouseenter droppable-mouseleave]}
+						(let [{:keys [node draggable-mousedown draggable-touchstart droppable-mouseenter droppable-mouseleave droppable-touchend]}
 												(get-in @dnd [:groups group :members member])]
 								(when draggable-mousedown (wjs/remove-listener node "mousedown" draggable-mousedown))
+								(when draggable-touchstart (wjs/remove-listener node "touchstart" draggable-touchstart))
 								(when droppable-mouseenter (wjs/remove-listener node "mouseenter" droppable-mouseenter))
 								(when droppable-mouseleave (wjs/remove-listener node "mouseleave" droppable-mouseleave))
+								(when droppable-touchend (wjs/remove-listener node "touchend" droppable-touchend))
 								(swap! dnd update-in [:groups group :members] dissoc member)))))
 
 (defn context [] (atom {}))
