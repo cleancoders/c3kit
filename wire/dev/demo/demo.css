@@ -64,61 +64,59 @@ h2 {
     overflow: scroll;
 }
 
-.rainbow-scroller {
-    position: relative;
-    box-shadow: 0 0 8px;
-    padding: 50px;
-    width: 200px;
-    height: 350px;
-    flex: 0 0 25%;
+.list-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.rainbow-container {
     flex-direction: column;
+}
+
+.space-container {
+    flex-direction: column;
+    width: 100px;
+}
+
+.team-container {
+    flex-direction: column;
+}
+
+.list-scroller {
+    width: 300px;
+    height: 300px;
     overflow: scroll;
     border: 1px solid darkslateblue;
-    text-align: center;
-    align-items: center;
-    align-content: center;
-    marker: none;
+    padding: 0px;
 }
 
-/*.color-wrapper {*/
-/*    width: auto;*/
-/*    height: 100px;*/
-/*    border: 1px solid lightgrey;*/
-/*    text-align: center;*/
-/*}*/
-
-.colors {
-    marker: none;
+ol {
+    list-style-type: none;
+    padding: 0px;
+    margin: 0px;
+    width: 500px;
 }
 
-.color {
-    position: relative;
-    display: flex;
-    flex: 1;
-    width: auto;
-    height: auto;
-    box-shadow: 0 0 8px;
-    border: 10px solid lightgrey;
+li {
+    padding: 0;
+    height: 50px;
+    width: 300px;
+    position: center;
+    list-style-type: none;
     text-align: center;
-    align-items: center;
+    border: 1px solid lightgrey;
 }
 
 .color-name {
-    position: relative;
-    align-content: center;
-    flex: 1;
     text-transform: uppercase;
 }
 
 .dragging-color {
-    position: absolute;
-    display: flex;
-    flex: 1;
-    width: 200px;
-    height: auto;
-    box-shadow: 0 0 8px;
-    background-color: white;
-    border: 10px solid lightgrey;
+    cursor: grabbing !important;
+    padding: 0;
+    width: 400px;
+    height: 50px;
+    list-style-type: none;
     text-align: center;
-    align-items: center;
+    border: 1px solid lightgrey;
 }

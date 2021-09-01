@@ -62,20 +62,20 @@
 
 (defn color-drop [{:keys [source-key target-key] :as stuff}]
 		(println "color drop")
+		(swap! rainbow-state dissoc :drop-color)
 		(update-order stuff))
 
 (defn drag-over-color [{:keys [source-key target-key] :as drag}]
-		(swap! rainbow-state assoc :drop-color target-key)
-		)
+		(println "drag-over-color: target-key: " target-key)
+		(swap! rainbow-state assoc :drop-color target-key))
 
 (defn drag-out-color [_]
-		(swap! rainbow-state dissoc :drop-color)
-		)
+		(swap! rainbow-state dissoc :drop-color))
 
 (defn color-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)
 								color (get @colors (:dragging @rainbow-state))]
-				[:div {:id "dragged-color" :style (str "width: " width "px;")}
+				[:div {:id "dragged-color" :class "dragging-color" :style (str "width: " width "px;") :background-color "white" :text (:color color)}
 					[:div {:class "dragging-color" :style {:background-color "white" :text (:color color)}}]]
 				))
 
@@ -94,34 +94,41 @@
 																			(dnd/on-drag-out :color drag-out-color)
 																			(dnd/set-drag-class :color "dragging-color")))
 
+(defn color-content [color]
+		(let [color-id (str "-color-" (:name color))]
+				[:li {:id "-color" :style {:background-color (:color color)}}
+					[:div {:id color-id :key color-id}
+						[:<>
+							[:span {:class "-color color-name"} [:span (:name color)]]]]]))
+
 (defn color-wrapper [color]
 		(let [color-name (:name color)
-								wrapper-id (str "-color-wrapper-" color-name)
-								color-id   (str "-color-" color-name)]
-				[:div.-color-wrapper {:id             wrapper-id :key wrapper-id
-																										:style          {:display "flex" :background-color (:color color)}
+								wrapper-id (str "-color-wrapper-" color-name)]
+				[:div.-color-wrapper {:id             wrapper-id
+																										:key            wrapper-id
+																										:style (when (= (keyword (:name color)) (:drop-color @rainbow-state)) {:height "100px" :background-color "white" :ref (dnd/register rainbow-dnd :color (keyword (:name color)))})
 																										:on-mouse-enter #(when-not (:dragging @rainbow-state) (swap! rainbow-state assoc :hover color-name))
 																										:on-mouse-leave #(swap! rainbow-state dissoc :hover)
 																										:class          (when (= color-name (:hover @rainbow-state)) "grab")
 																										:ref            (dnd/register rainbow-dnd :color (keyword color-name))
 																										}
-					[:li
-						[:div {:id color-id :key color-id}
-							[:<>
-								[:span {:class "-color color-name"} [:span color-name]]]]]]))
+					[color-content color]]))
 
 (defn rainbow-demo []
 		[:div#rainbow-demo.demo-container
 			[:h2 "Rainbow Demo"]
 			[:p "Change the order of the rainbow"]
-			[:div {:style {:display "flex"}}
-				[:div.rainbow-scroller
+			[:div ;{:style {:display "flex"}}
+				[:div.list-scroller
 					(let [colors (seq (get-color-order (get @colors (keyword (:first-color @rainbow-state)))))]
-							[:ol {:id "-colors"}
-								[:div#-before {:style {:height "50px"} :ref (dnd/register rainbow-dnd :color :before)}]
+							[:ol#-colors.colors
+								[:div#-before
+									(if (= :before (:drop-color @rainbow-state))
+											{:style {:height "50px"} :ref (dnd/register rainbow-dnd :color :before)}
+											{:style {:height "1px"} :ref (dnd/register rainbow-dnd :color :before)})]
 								(ccc/for-all [color colors]
 										(color-wrapper color))
-								[:div#-after {:style {:height "50px"} :ref (dnd/register rainbow-dnd :color :after)}]])]]])
+								])]]])
 
 
 (defn random-golf-position [] {:left (rand-int 450) :top (rand-int 450)})
@@ -196,9 +203,13 @@
 			[:div
 				[:h1 "Drag & Drop Demo"]
 				[golf-demo]]
-			[:div
+			[:div.list-container
+				[:div.rainbow-container
 				[:h1 "Colors of the Rainbow"]
-				[rainbow-demo]]])
+				[rainbow-demo]]
+				[:div.space-container]
+				[:div.team-container
+					[:h1 "Choose Your Team"]]]])
 
 (defn ^:export init []
 		(dom/render [content] (wjs/element-by-id "main"))
