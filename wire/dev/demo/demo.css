@@ -71,20 +71,14 @@ h2 {
 
 .rainbow-container {
     flex-direction: column;
-}
-
-.space-container {
-    flex-direction: column;
-    width: 100px;
-}
-
-.team-container {
-    flex-direction: column;
+    padding-left: 10px;
+    padding-right: 150px;
 }
 
 .list-scroller {
+    flex-direction: column;
     width: 300px;
-    height: 300px;
+    height: 350px;
     overflow: scroll;
     border: 1px solid darkslateblue;
     padding: 0px;
@@ -97,7 +91,7 @@ ol {
     width: 500px;
 }
 
-li {
+li.color {
     padding: 0;
     height: 50px;
     width: 300px;
@@ -107,7 +101,7 @@ li {
     border: 1px solid lightgrey;
 }
 
-.color-name {
+.item-name {
     text-transform: uppercase;
 }
 
@@ -119,4 +113,34 @@ li {
     list-style-type: none;
     text-align: center;
     border: 1px solid lightgrey;
+}
+
+
+.teams-container {
+    flex-direction: column;
+}
+
+.team-container {
+    flex-direction: column;
+    padding-right: 25px;
+}
+
+.dragging-truck {
+    cursor: grabbing !important;
+    padding: 0;
+    width: 400px;
+    height: 50px;
+    list-style-type: none;
+    text-align: center;
+    border: 1px solid lightgrey;
+}
+
+li.truck {
+    padding: 0;
+    height: 50px;
+    width: 300px;
+    position: center;
+    list-style-type: none;
+    text-align: center;
+    border: 1px solid darkslateblue;
 }
