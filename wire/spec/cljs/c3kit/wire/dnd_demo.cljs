@@ -264,13 +264,18 @@
 (defn color-drag-started [{:keys [source-key] :as drag}]
 		(let [source-color    (get @colors source-key)
 								source-previous (first (filter #(= source-key (:next %)) (vals @colors)))]
-				(swap! rainbow-state assoc :dragging source-key :dragged-color (get @colors source-key) :hover nil :original-state {:colors @colors :first-item (:first-item @rainbow-state)})
+				(swap! rainbow-state assoc :dragging source-key :dragged-color (get @colors source-key) :hover nil :original-state {:items @colors :state @rainbow-state})
 				(if source-previous
 						(swap! colors assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
 						(swap! rainbow-state assoc :first-item (:next source-color)))
 				(swap! colors dissoc source-key)))
 
-(defn color-drag-end [] (swap! rainbow-state dissoc :dragging :hover :colors))
+(defn color-drag-end [{:keys [source-key]}]
+		(println "source-key: " source-key)
+		(println "(filter #(= source-key (keyword (:name %))) @colors): " (filter #(= source-key (keyword (:name %))) @colors))
+		(when (empty? (filter #(= source-key (keyword (:name %))) @colors))
+				(return-to-original-state))
+		(swap! rainbow-state dissoc :dragging :hover :colors))
 
 (defn color-drop [{:keys [source-key target-key] :as stuff}]
 		(println "color drop")
