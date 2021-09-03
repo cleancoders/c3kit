@@ -11,47 +11,61 @@
 				(before (reset! sut/colors {:red {:name "red" :color "red" :next :orange} :orange {:name "orange" :color "orange" :next :yellow} :yellow {:name "yellow" :color "yellow" :next :green} :green {:name "green" :color "green" :next :blue} :blue {:name "blue" :color "blue" :next :indigo} :indigo {:name "indigo" :color "indigo" :next :violet} :violet {:name "violet" :color "blueviolet"}})
 						(reset! sut/rainbow-state {:first-item :red}))
 
+				(it "moves to nil drop point"
+						(sut/color-drag-started {:source-key :red})
+						(sut/update-order {:source-key :red :target-key nil})
+						(sut/color-drag-end sut/teams-dnd)
+						(should-be-nil (:original-state @sut/rainbow-state))
+						(should-be-nil (:dragging @sut/rainbow-state))
+						(should-be-nil (:hover @sut/rainbow-state))
+						(should= :red (get-in @sut/rainbow-state [:first-item]))
+						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
+								(should= ["red" "orange" "yellow" "green" "blue" "indigo" "violet"] (map :name colors))))
+
 				(it "moves red after orange (move first element down one)"
-						(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :red))
-						(sut/update-order {:source-key :red :target-key :orange})
+						(sut/color-drag-started {:source-key :red})
+						(sut/update-order {:source-key :red :target-key :yellow})
 						(should= :orange (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= {:name "orange" :color "orange" :next :red} (first colors))
 								(should= {:name "red" :color "red" :next :yellow} (second colors))))
 
-				(it "moves orange after blue"
+				(it "moves orange before blue"
 						(sut/color-drag-started {:source-key :orange})
 						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :orange))
 						(sut/update-order {:source-key :orange :target-key :blue})
 						(should= :red (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
-								(should= ["red" "yellow" "green" "blue" "orange" "indigo" "violet"] (map :name colors))))
+								(should= ["red" "yellow" "green" "orange" "blue" "indigo" "violet"] (map :name colors))))
 
 				(it "moves orange to last"
 						(sut/color-drag-started {:source-key :orange})
 						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :orange))
-						(sut/update-order {:source-key :orange :target-key :violet})
+						(sut/update-order {:source-key :orange :target-key :after})
 						(should= :red (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= ["red" "yellow" "green" "blue" "indigo" "violet" "orange"] (map :name colors))))
 
 				(it "moves red to last"
-						(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :red))
-						(sut/update-order {:source-key :red :target-key :violet})
+						(sut/color-drag-started {:source-key :red})
+						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :red))
+						(sut/update-order {:source-key :red :target-key :after})
 						(should= :orange (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= ["orange" "yellow" "green" "blue" "indigo" "violet" "red"] (map :name colors))))
 
 				(it "moves blue to first"
-						(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :blue))
-						(sut/update-order {:source-key :blue :target-key :before})
+						(sut/color-drag-started {:source-key :blue})
+						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :blue))
+						(sut/update-order {:source-key :blue :target-key :red})
 						(should= :blue (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= ["blue" "red" "orange" "yellow" "green" "indigo" "violet"] (map :name colors))))
 
 				(it "moves violet to first"
-						(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :violet))
-						(sut/update-order {:source-key :violet :target-key :before})
+						(sut/color-drag-started {:source-key :violet})
+						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :violet))
+						(sut/update-order {:source-key :violet :target-key :red})
 						(should= :violet (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= ["violet" "red" "orange" "yellow" "green" "blue" "indigo"] (map :name colors))))
@@ -59,7 +73,7 @@
 				(it "moves indigo before orange"
 						(sut/color-drag-started {:source-key :indigo})
 						;(swap! sut/rainbow-state assoc :dragged-color (get @sut/colors :indigo))
-						(sut/update-order {:source-key :indigo :target-key :red})
+						(sut/update-order {:source-key :indigo :target-key :orange})
 						(should= :red (:first-item @sut/rainbow-state))
 						(let [colors (sut/get-color-order (get @sut/colors (:first-item @sut/rainbow-state)) sut/colors)]
 								(should= ["red" "indigo" "orange" "yellow" "green" "blue" "violet"] (map :name colors))))

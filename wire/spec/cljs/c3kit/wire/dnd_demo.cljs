@@ -83,10 +83,11 @@
 						:else (move-item-down-list source-key target-key updated-source target-truck))
 				))
 
-(defn return-to-original-state []
-		(let [{:keys [items state]} (:original-state @teams-state)]
-				(reset! teams-state state)
-				(reset! all-trucks items)))
+(defn return-to-original-state [state-atom items-atom]
+		(let [{:keys [items state]} (:original-state @state-atom)]
+				(println "items state: " items state)
+				(reset! state-atom state)
+				(reset! items-atom items)))
 
 (defn update-truck-order [{:keys [source-key target-key] :as drag}]
 		(println "update order")
@@ -116,7 +117,7 @@
 
 (defn truck-drag-end [{:keys [source-key drop-target] :as drag}]
 		(when (empty? (filter #(= source-key (:name %)) @all-trucks))
-				(return-to-original-state))
+				(return-to-original-state teams-state all-trucks))
 		(swap! teams-state dissoc :dragging :hover :original-state))
 
 (defn truck-drop [drag]
@@ -180,7 +181,6 @@
 (defn list-items []
 		[:div#-trucks.list-scroller
 			(let [trucks (get-jam-order :trucks)]
-					(println "trucks: " trucks)
 					[:ol#-colors.colors
 						[:div#-before
 							(if (= :before-trucks (:drop-box @teams-state))
@@ -230,38 +230,50 @@
 						(recur (get @items-atom (keyword (:next item))) (conj ordered-items item)))))
 
 (defn move-first-element [source-key target-key source-color target-color]
-		(let [updated-colors (-> @colors
-																									(assoc-in [target-key :next] source-key)
-																									(assoc source-key (assoc source-color :next (:next target-color))))]
+		(println "move-first-element")
+		(let [target-prev (first (filter #(= target-key (:next %)) (vals @colors)))
+								updated-colors (-> @colors
+																									(assoc-in [(keyword (:name target-prev)) :next] source-key)
+																									;(assoc-in [target-key :next] source-key)
+																									(assoc source-key (assoc source-color :next target-key)))]
 				(swap! colors merge updated-colors)
 				(swap! rainbow-state assoc :first-item (:next source-color))))
 
 (defn move-down-list [source-key target-key source-color target-color]
-		(let [source-previous (first (filter #(= source-key (:next %)) (vals @colors)))
-								updated-colors  (-> @colors
-																										;(assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
-																										(assoc source-key (assoc source-color :next (:next target-color)))
-																										(assoc-in [target-key :next] source-key))]
+		(println "move-down-list")
+		(let [target-prev (first (filter #(= target-key (:next %)) (vals @colors)))
+								updated-colors  (if target-prev
+																										(-> (assoc-in @colors [(keyword (:name target-prev)) :next] source-key)
+																										(assoc source-key (assoc source-color :next target-key))
+																										#_(assoc-in [target-key :next] source-key))
+																										(assoc @colors source-key (assoc source-color :next target-key)))
+								]
+				;(when (= source-key (:first-item @rainbow-state)) (swap! rainbow-state assoc :first-item (:next source-color)))
+				(when (= target-key (:first-item @rainbow-state)) (swap! rainbow-state assoc :first-item source-key))
 				(swap! rainbow-state assoc :colors updated-colors)
 				(swap! colors merge updated-colors)))
 
-(defn move-to-first [source-key source-color]
-		(let [first-color     (:first-item @rainbow-state)
-								source-previous (first (filter #(= source-key (:next %)) (vals @colors)))
+(defn move-to-last [source-key source-color target-key]
+		(println "move to first")
+		(let [last-color (first (filter #(nil? (:next %)) (vals @colors)))
 								updated-colors  (-> @colors
-																										(assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
-																										(assoc source-key (assoc source-color :next first-color)))]
-				(swap! colors merge updated-colors)
-				(swap! rainbow-state assoc :first-item source-key)))
+																										(assoc (keyword (:name last-color)) (assoc last-color :next source-key))
+																										;(assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
+																										(assoc source-key (dissoc source-color :next)))]
+				(reset! colors updated-colors)
+				;(swap! rainbow-state assoc :first-item source-key)
+				))
 
 (defn update-order [{:keys [source-key target-key]}]
+		(println "source-key target-key: " source-key target-key)
 		(let [source-color (:dragged-color @rainbow-state)
 								target-color (get @colors target-key)]
-				(cond (= (:first-item @rainbow-state) source-key) (move-first-element source-key target-key source-color target-color)
-						(= :before target-key) (move-to-first source-key source-color)
+				(cond ;(= (:first-item @rainbow-state) source-key) (move-first-element source-key target-key source-color target-color)
+						(= :after target-key) (move-to-last source-key source-color target-key)
 						:else (move-down-list source-key target-key source-color target-color))))
 
-(defn color-drag-started [{:keys [source-key] :as drag}]
+(defn color-drag-started [{:keys [source-key]}]
+		(println "drag started")
 		(let [source-color    (get @colors source-key)
 								source-previous (first (filter #(= source-key (:next %)) (vals @colors)))]
 				(swap! rainbow-state assoc :dragging source-key :dragged-color (get @colors source-key) :hover nil :original-state {:items @colors :state @rainbow-state})
@@ -270,19 +282,17 @@
 						(swap! rainbow-state assoc :first-item (:next source-color)))
 				(swap! colors dissoc source-key)))
 
-(defn color-drag-end [{:keys [source-key]}]
-		(println "source-key: " source-key)
-		(println "(filter #(= source-key (keyword (:name %))) @colors): " (filter #(= source-key (keyword (:name %))) @colors))
-		(when (empty? (filter #(= source-key (keyword (:name %))) @colors))
-				(return-to-original-state))
+(defn color-drag-end [{:keys [source-key target-key]}]
+		(println "color drag end source-key, target-key: " source-key target-key)
+		(when (empty? (filter #(= source-key (keyword (:name %))) (vals @colors)))
+				(return-to-original-state rainbow-state colors))
 		(swap! rainbow-state dissoc :dragging :hover :colors))
 
-(defn color-drop [{:keys [source-key target-key] :as stuff}]
-		(println "color drop")
-		(swap! rainbow-state dissoc :drop-color)
-		(update-order stuff))
+(defn color-drop [dnd]
+		(update-order dnd)
+		(swap! rainbow-state dissoc :drop-color :dragged-color))
 
-(defn drag-over-color [{:keys [source-key target-key] :as drag}]
+(defn drag-over-color [{:keys [target-key]}]
 		(println "drag-over-color: target-key: " target-key)
 		(swap! rainbow-state assoc :drop-color target-key))
 
@@ -312,7 +322,7 @@
 																			(dnd/set-drag-class :color "dragging-color")))
 
 (defn color-content [color]
-		(let [color-id (str "-color-" (:name color))]
+		(let [color-id       (str "-color-" (:name color))]
 				[:li.color {:id "-color" :style {:background-color (:color color)}}
 					[:div {:id color-id :key color-id}
 						[:<>
@@ -323,12 +333,14 @@
 								wrapper-id (str "-color-wrapper-" color-name)]
 				[:div.-color-wrapper {:id             wrapper-id
 																										:key            wrapper-id
-																										:style          (when (= (keyword (:name color)) (:drop-color @rainbow-state)) {:height "100px" :background-color "white"})
+																										;:style          (when (= (keyword (:name color)) (:drop-color @rainbow-state)) {:height "100px" :background-color "white"})
 																										:on-mouse-enter #(when-not (:dragging @rainbow-state) (swap! rainbow-state assoc :hover color-name))
 																										:on-mouse-leave #(swap! rainbow-state dissoc :hover)
 																										:class          (when (= color-name (:hover @rainbow-state)) "grab")
 																										:ref            (dnd/register rainbow-dnd :color (keyword color-name))
 																										}
+					(when (= (keyword (:name color)) (:drop-color @rainbow-state))
+							[:div {:id "-placeholder" :style {:height "50px" :background-color "white"}}])
 					[color-content color]]))
 
 (defn rainbow-demo []
@@ -336,15 +348,17 @@
 			[:h2 "Rainbow Demo"]
 			[:p "Change the order of the rainbow"]
 			[:div                                                    ;{:style {:display "flex"}}
-				[:div.list-scroller
+				[:div.list-scroller ;{:ref (dnd/register rainbow-dnd :color :list)}
 					(let [colors (seq (get-color-order (get @colors (keyword (:first-item @rainbow-state))) colors))]
 							[:ol#-colors.colors
-								[:div#-before
-									(if (= :before (:drop-color @rainbow-state))
-											{:style {:height "50px"} :ref (dnd/register rainbow-dnd :color :before)}
-											{:style {:height "1px"} :ref (dnd/register rainbow-dnd :color :before)})]
+								;[:div#-before
+								;	(if (= :before (:drop-color @rainbow-state))
+								;			{:style {:height "50px"} :ref (dnd/register rainbow-dnd :color :before)}
+								;			{:style {:height "1px"} :ref (dnd/register rainbow-dnd :color :before)})]
 								(ccc/for-all [color colors]
 										(color-wrapper color))
+								[:div#-after
+									{:style {:height "100px"} :ref (dnd/register rainbow-dnd :color :after)}]
 								])]]])
 
 
