@@ -20,109 +20,105 @@
 																															{:name "Blaze" :owner :trucks :next "Dragon"}
 																															{:name "Dragon" :owner :trucks}]))
 
-(defn get-truck-by-owner [name items] (first (filter #(= name (:name %)) items)))
-(defn get-first-of-list [owner] (get-in @teams-state [owner :first-item]))
-(defn get-items-by-owner [owner] (filter #(= owner (:owner %)) @all-trucks))
+(defn get-element-by-name [name items] (first (filter #(or (= name (keyword (:name %))) (= name (:name %))) items)))
+(defn get-first-of-list [state items owner] (-> (get-in @state [owner :first-item]) (get-element-by-name items)))
+(defn get-first-element-name [state owner] (get-in @state [owner :first-item]))
+(defn get-elements-by-owner [owner items] (filter #(= owner (:owner %)) items))
 
-(defn get-jam-order [owner]
-		(let [items (filter #(= owner (:owner %)) @all-trucks)]
-				(loop [item          (get-truck-by-owner (get-in @teams-state [owner :first-item]) items)
+(defn get-items-order [items owner first-item]
+		(let [items (get-elements-by-owner owner items)]
+				(loop [item          first-item
 											ordered-items []]
 						(if-not (:next item)
 								(seq (conj ordered-items item))
-								(recur (get-truck-by-owner (:next item) items) (conj ordered-items item))))))
+								(recur (get-element-by-name (:next item) items) (conj ordered-items item))))))
 
-(defn remove-truck
-		([truck] (remove #(= (:name truck) (:name %)) @all-trucks))
-		([trucks truck] (remove #(= (:name truck) (:name %)) trucks)))
+(defn remove-element
+		[elements element] (remove #(= (:name element) (:name %)) elements))
 
-(defn move-the-first-element [source-key target-key source-truck target-truck]
-		(println "move first element")
-		(let [updated-trucks (-> @all-trucks
-																									(remove-truck target-truck)
-																									(conj (assoc target-truck :next source-key))
-																									(remove-truck source-truck)
-																									(conj (assoc source-truck :next (:next target-truck))))]
-				(reset! all-trucks updated-trucks)
-				(swap! teams-state assoc-in [(:owner source-truck) :first-item] (:next source-truck))))
+(defn update-elements [element update-fn elements]
+		(if-not element
+				elements
+				(-> (remove-element elements element) (conj (update-fn)))))
 
-(defn move-item-down-list [source-key target-key source-truck target-truck]
-		(println "move-down-list")
-		(let [updated-trucks (-> @all-trucks
-																									(remove-truck source-truck)
-																									(conj (assoc source-truck :next (:next target-truck)))
-																									(remove-truck target-truck)
-																									(conj (assoc target-truck :next source-key)))]
-				(reset! all-trucks updated-trucks)))
+(defn move-element-in-list [source-key source-element target-element state-atom items-atom]
+		(println "move element in list")
+		(let [first-element-name (get-first-element-name state-atom (:owner source-element))
+								target-key         (:name target-element)
+								target-previous    (first (filter #(or (= (keyword target-key) (:next %)) (= target-key (:next %))) @items-atom))
+								updated-elements   (->> @items-atom
+																													(update-elements source-element #(assoc source-element :next target-key :owner (:owner target-element)))
+																													(update-elements target-previous #(assoc target-previous :next source-key)))]
+				(when (or (= target-key first-element-name) (= (keyword target-key) first-element-name))
+						(swap! state-atom assoc-in [(:owner source-element) :first-item] source-key))
+				(reset! items-atom updated-elements)))
 
-(defn move-item-to-first [source-key source-truck]
-		(println "move to first")
-		(let [first-truck-name (get-first-of-list (:owner source-truck))
-								;source-previous  (first (filter #(= source-key (:next %)) (get-items-by-owner (:owner source-truck))))
-								updated-trucks   (->
-																											;(remove-truck source-previous)
-																											;(conj (assoc source-previous :next (:next source-truck)))
-																											(remove-truck source-truck)
-																											(conj (assoc source-truck :next first-truck-name)))]
-				(reset! all-trucks updated-trucks)
-				(swap! teams-state assoc-in [(:owner source-truck) :first-item] source-key)))
+(defn move-element-to-last [source-key source-element state-atom items-atom]
+		(println "move to last")
+		(let [last-element     (last (get-items-order @items-atom (:owner source-element) (get-first-of-list state-atom @items-atom (:owner source-element))))
+								updated-elements (->> @items-atom
+																											(update-elements source-element #(dissoc source-element :next))
+																											(update-elements last-element #(assoc last-element :next source-key)))]
+				(reset! items-atom updated-elements)
+				(when-not last-element (swap! state-atom assoc-in [(:owner source-element) :first-item] source-key))))
 
-(defn move-to-new-owner [source-key target-key source-truck target-truck]
+(defn move-to-new-owner [source-key target-key source-element target-element state-atom]
 		(println "changing owners")
-		(let [before-key?    (some #(= target-key %) (vals @lists))
-								new-owner      (if before-key?
-																									(key (first (filter #(= target-key (val %)) @lists)))
-																									(if target-truck
-																											(:owner target-truck)
-																											target-key))
-								first-element? (empty? (filter #(= new-owner (:owner %)) @all-trucks))
-								target-truck   (if target-truck target-truck (last (get-jam-order new-owner)))
-								updated-source (-> source-truck (assoc :owner new-owner) (dissoc :next))
-								]
-				(cond (or first-element? before-key?) (move-item-to-first source-key updated-source)
-						:else (move-item-down-list source-key target-key updated-source target-truck))
-				))
+		(let [new-owner      (if target-element (:owner target-element) target-key)
+								first-element  (get-first-of-list teams-state @all-trucks new-owner)
+								updated-source (-> source-element (assoc :owner new-owner) (dissoc :next))]
+				(if (or (nil? target-element) (nil? first-element))
+						(move-element-to-last source-key updated-source teams-state all-trucks)
+						(move-element-in-list source-key updated-source target-element teams-state all-trucks))))
 
 (defn return-to-original-state [state-atom items-atom]
 		(let [{:keys [items state]} (:original-state @state-atom)]
-				(println "items state: " items state)
 				(reset! state-atom state)
 				(reset! items-atom items)))
 
-(defn update-truck-order [{:keys [source-key target-key] :as drag}]
-		(println "update order")
-		(let [source-truck (:dragged-truck @teams-state)
-								target-truck (get-truck-by-owner target-key @all-trucks)
-								before-key   (keyword (str "before-" (apply str (rest (str (:owner source-truck))))))
-								]
-				(cond (= before-key target-key) (move-item-to-first source-key source-truck)
-						(not (= (:owner source-truck) (:owner target-truck))) (move-to-new-owner source-key target-key source-truck target-truck)
-						:else (move-item-down-list source-key target-key source-truck target-truck))))
+(defn update-color-order [{:keys [source-key target-key]} state-atom items-atom]
+		(println "source-key target-key: " source-key target-key)
+		(let [source-color (:dragged-element @state-atom)
+								target-color (get-element-by-name target-key @items-atom)]
+				(cond                                                   ;(= (:first-item @rainbow-state) source-key) (move-first-element source-key target-key source-color target-color)
+						(= :after target-key) (move-element-to-last source-key source-color state-atom items-atom)
+						:else (move-element-in-list source-key source-color target-color state-atom items-atom))))
 
-(defn update-previous [previous-truck source-truck]
-		(let [updated-previous (assoc previous-truck :next (:next source-truck))
-								updated-trucks   (-> (remove-truck previous-truck)
+(defn update-order [{:keys [source-key target-key]} state-atom items-atom]
+		(println "update order")
+		(let [source-element (:dragged-element @state-atom)
+								target-element (get-element-by-name target-key @items-atom)
+								after-key      (keyword (str "after-" (apply str (rest (str (:owner source-element))))))
+								]
+				(cond (or (= :after target-key) (= after-key target-key)) (move-element-to-last source-key source-element state-atom items-atom)
+						(not= (:owner source-element) (:owner target-element)) (move-to-new-owner source-key target-key source-element target-element state-atom)
+						:else (move-element-in-list source-key source-element target-element state-atom items-atom))))
+
+(defn update-previous [previous-element source-element items-atom]
+		(let [updated-previous (assoc previous-element :next (:next source-element))
+								updated-elements (-> @items-atom
+																											(remove-element previous-element)
 																											(conj updated-previous))]
-				(reset! all-trucks updated-trucks)))
+				(reset! items-atom updated-elements)))
 
 (defn truck-drag-started [{:keys [source-key]}]
-		(let [source-truck    (get-truck-by-owner source-key @all-trucks)
+		(let [source-truck    (get-element-by-name source-key @all-trucks)
 								first-in-list?  (= source-key (get-in @teams-state [(:owner source-truck) :first-item]))
 								source-previous (first (filter #(= (:name source-truck) (:next %)) @all-trucks))]
-				(swap! teams-state assoc :dragging source-key :dragged-truck source-truck :hover nil :original-state {:items @all-trucks :state @teams-state})
+				(swap! teams-state assoc :dragging source-key :dragged-element source-truck :hover nil :original-state {:items @all-trucks :state @teams-state})
 				(if first-in-list?
 						(swap! teams-state assoc-in [(:owner source-truck) :first-item] (:next source-truck))
-						(update-previous source-previous source-truck))
-				(swap! all-trucks #(remove-truck source-truck))))
+						(update-previous source-previous source-truck all-trucks))
+				(swap! all-trucks #(remove-element @all-trucks source-truck))))
 
 (defn truck-drag-end [{:keys [source-key drop-target] :as drag}]
 		(when (empty? (filter #(= source-key (:name %)) @all-trucks))
 				(return-to-original-state teams-state all-trucks))
 		(swap! teams-state dissoc :dragging :hover :original-state))
 
-(defn truck-drop [drag]
+(defn truck-drop [dnd]
 		(println "TRUCK DROP")
-		(update-truck-order drag)
+		(update-order dnd teams-state all-trucks)
 		(swap! teams-state dissoc :drop-box))
 
 (defn drag-over-truck [{:keys [source-key target-key] :as drag}]
@@ -180,29 +176,29 @@
 
 (defn list-items []
 		[:div#-trucks.list-scroller
-			(let [trucks (get-jam-order :trucks)]
+			(let [first-truck (get-first-of-list teams-state @all-trucks :trucks)
+									trucks      (get-items-order @all-trucks :trucks first-truck)]
 					[:ol#-colors.colors
-						[:div#-before
-							(if (= :before-trucks (:drop-box @teams-state))
-									{:style {:height "50px"} :ref (dnd/register teams-dnd :truck :before-trucks)}
-									{:style {:height "1px"} :ref (dnd/register teams-dnd :truck :before-trucks)})]
 						(ccc/for-all [truck trucks]
 								(truck-wrapper truck))
-						])])
+						[:div#-after
+							(if (= :after-trucks (:drop-box @teams-state))
+									{:style {:height "50px"} :ref (dnd/register teams-dnd :truck :after-trucks)}
+									{:style {:height "1px"} :ref (dnd/register teams-dnd :truck :after-trucks)})]])])
 
 (defn show-team []
 		[:div#-team.list-scroller {:ref (dnd/register teams-dnd :list :team)}
-			(let [first-member    (get-first-of-list :team)
-									ordered-members (when first-member (get-jam-order :team))]
+			(let [first-item    (get-first-of-list teams-state @all-trucks :team)
+									ordered-items (when first-item (get-items-order @all-trucks :team first-item))]
 					[:ol#-team.colors
-						[:div#-before
-							(if (= :before-team (:drop-box @teams-state))
-									{:style {:height "50px"} :ref (dnd/register teams-dnd :truck :before-team)}
-									{:style {:height "1px"} :ref (dnd/register teams-dnd :truck :before-team)})]
-						(when ordered-members
-								(ccc/for-all [member ordered-members]
+						(when ordered-items
+								(ccc/for-all [member ordered-items]
 										(truck-wrapper member)))
-						[:li.truck "Drop a Monster Truck here"]])])
+						[:li.truck "Drop a Monster Truck here"]
+						[:div#-after
+							(if (= :after-team (:drop-box @teams-state))
+									{:style {:height "50px"} :ref (dnd/register teams-dnd :truck :after-team)}
+									{:style {:height "1px"} :ref (dnd/register teams-dnd :truck :after-team)})]])])
 
 (defn team-demo []
 		[:div#team-demo.demo-container
@@ -219,8 +215,8 @@
 
 
 
-(def rainbow-state (reagent/atom {:first-item :red}))
-(def colors (reagent/atom {:red {:name "red" :color "red" :next :orange} :orange {:name "orange" :color "orange" :next :yellow} :yellow {:name "yellow" :color "yellow" :next :green} :green {:name "green" :color "green" :next :blue} :blue {:name "blue" :color "blue" :next :indigo} :indigo {:name "indigo" :color "indigo" :next :violet} :violet {:name "violet" :color "blueviolet"}}))
+(def rainbow-state (reagent/atom {:colors {:first-item :red}}))
+(def colors (reagent/atom [{:name "red" :color "red" :owner :colors :next :orange} {:name "orange" :color "orange" :owner :colors :next :yellow} {:name "yellow" :color "yellow" :owner :colors :next :green} {:name "green" :color "green" :owner :colors :next :blue} {:name "blue" :color "blue" :owner :colors :next :indigo} {:name "indigo" :color "indigo" :owner :colors :next :violet} {:name "violet" :color "blueviolet" :owner :colors}]))
 
 (defn get-color-order [item items-atom]
 		(loop [item          item
@@ -229,71 +225,31 @@
 						(conj ordered-items item)
 						(recur (get @items-atom (keyword (:next item))) (conj ordered-items item)))))
 
-(defn move-first-element [source-key target-key source-color target-color]
-		(println "move-first-element")
-		(let [target-prev (first (filter #(= target-key (:next %)) (vals @colors)))
-								updated-colors (-> @colors
-																									(assoc-in [(keyword (:name target-prev)) :next] source-key)
-																									;(assoc-in [target-key :next] source-key)
-																									(assoc source-key (assoc source-color :next target-key)))]
-				(swap! colors merge updated-colors)
-				(swap! rainbow-state assoc :first-item (:next source-color))))
-
-(defn move-down-list [source-key target-key source-color target-color]
-		(println "move-down-list")
-		(let [target-prev (first (filter #(= target-key (:next %)) (vals @colors)))
-								updated-colors  (if target-prev
-																										(-> (assoc-in @colors [(keyword (:name target-prev)) :next] source-key)
-																										(assoc source-key (assoc source-color :next target-key))
-																										#_(assoc-in [target-key :next] source-key))
-																										(assoc @colors source-key (assoc source-color :next target-key)))
-								]
-				;(when (= source-key (:first-item @rainbow-state)) (swap! rainbow-state assoc :first-item (:next source-color)))
-				(when (= target-key (:first-item @rainbow-state)) (swap! rainbow-state assoc :first-item source-key))
-				(swap! rainbow-state assoc :colors updated-colors)
-				(swap! colors merge updated-colors)))
-
-(defn move-to-last [source-key source-color target-key]
-		(println "move to first")
-		(let [last-color (first (filter #(nil? (:next %)) (vals @colors)))
-								updated-colors  (-> @colors
-																										(assoc (keyword (:name last-color)) (assoc last-color :next source-key))
-																										;(assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
-																										(assoc source-key (dissoc source-color :next)))]
-				(reset! colors updated-colors)
-				;(swap! rainbow-state assoc :first-item source-key)
-				))
-
-(defn update-order [{:keys [source-key target-key]}]
-		(println "source-key target-key: " source-key target-key)
-		(let [source-color (:dragged-color @rainbow-state)
-								target-color (get @colors target-key)]
-				(cond ;(= (:first-item @rainbow-state) source-key) (move-first-element source-key target-key source-color target-color)
-						(= :after target-key) (move-to-last source-key source-color target-key)
-						:else (move-down-list source-key target-key source-color target-color))))
-
 (defn color-drag-started [{:keys [source-key]}]
 		(println "drag started")
-		(let [source-color    (get @colors source-key)
-								source-previous (first (filter #(= source-key (:next %)) (vals @colors)))]
-				(swap! rainbow-state assoc :dragging source-key :dragged-color (get @colors source-key) :hover nil :original-state {:items @colors :state @rainbow-state})
-				(if source-previous
-						(swap! colors assoc-in [(keyword (:name source-previous)) :next] (:next source-color))
-						(swap! rainbow-state assoc :first-item (:next source-color)))
-				(swap! colors dissoc source-key)))
+		(let [source-element  (get-element-by-name source-key @colors)
+								first-in-list?  (= source-key (get-in @rainbow-state [(:owner source-element) :first-item]))
+								;source-previous (first (filter #(or (= source-key (:next %)) (= source-key (:next %))) @colors))
+								source-previous (first (filter #(= source-key (:next %)) @colors))
+								]
+				(swap! rainbow-state assoc :dragging source-key :dragged-element source-element :hover nil :original-state {:items @colors :state @rainbow-state})
+				(if first-in-list?
+						(swap! rainbow-state assoc-in [(:owner source-element) :first-item] (:next source-element))
+						(update-previous source-previous source-element colors))
+				(swap! colors #(remove-element @colors source-element))))
 
 (defn color-drag-end [{:keys [source-key target-key]}]
-		(println "color drag end source-key, target-key: " source-key target-key)
-		(when (empty? (filter #(= source-key (keyword (:name %))) (vals @colors)))
+		(println "color drag end")
+		(when (empty? (filter #(= source-key (keyword (:name %))) @colors))
 				(return-to-original-state rainbow-state colors))
-		(swap! rainbow-state dissoc :dragging :hover :colors))
+		(swap! rainbow-state dissoc :dragging :hover :original-state))
 
 (defn color-drop [dnd]
-		(update-order dnd)
-		(swap! rainbow-state dissoc :drop-color :dragged-color))
+		(update-color-order dnd rainbow-state colors)
+		(swap! rainbow-state dissoc :drop-color :dragged-element))
 
 (defn drag-over-color [{:keys [target-key]}]
-		(println "drag-over-color: target-key: " target-key)
+		(println "drag-over-color target-key: " target-key)
 		(swap! rainbow-state assoc :drop-color target-key))
 
 (defn drag-out-color [_]
@@ -322,7 +278,7 @@
 																			(dnd/set-drag-class :color "dragging-color")))
 
 (defn color-content [color]
-		(let [color-id       (str "-color-" (:name color))]
+		(let [color-id (str "-color-" (:name color))]
 				[:li.color {:id "-color" :style {:background-color (:color color)}}
 					[:div {:id color-id :key color-id}
 						[:<>
@@ -348,8 +304,11 @@
 			[:h2 "Rainbow Demo"]
 			[:p "Change the order of the rainbow"]
 			[:div                                                    ;{:style {:display "flex"}}
-				[:div.list-scroller ;{:ref (dnd/register rainbow-dnd :color :list)}
-					(let [colors (seq (get-color-order (get @colors (keyword (:first-item @rainbow-state))) colors))]
+				[:div.list-scroller                                     ;{:ref (dnd/register rainbow-dnd :color :list)}
+					(let [first-color (get-first-of-list rainbow-state @colors :colors)
+											colors      (get-items-order @colors :colors first-color)]
+							(println "first-color: " first-color)
+							(println "(map :name colors): " (map :name colors))
 							[:ol#-colors.colors
 								;[:div#-before
 								;	(if (= :before (:drop-color @rainbow-state))
