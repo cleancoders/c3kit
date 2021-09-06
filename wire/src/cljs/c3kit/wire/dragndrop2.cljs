@@ -366,3 +366,26 @@
 				(fn [node] (fake-hiccup->dom (fake-hiccup-fn node))))
 		dnd)
 
+
+(defn get-element-by-name [name items] (first (filter #(or (= name (keyword (:name %))) (= name (:name %))) items)))
+(defn get-element-by-id [id items] (first (filter #(or (= id (keyword (:id %))) (= id (:id %))) items)))
+(defn get-first-element-name [state owner] (get-in @state [owner :first-item]))
+(defn get-first-element [state items owner] (-> (get-first-element-name state owner) (get-element-by-name items)))
+(defn get-elements-by-owner [owner items] (filter #(= owner (:owner %)) items))
+
+(defn get-items-order [items owner first-item]
+		(let [items (get-elements-by-owner owner items)]
+				(loop [item          first-item
+											ordered-items []]
+						(if-not (:next item)
+								(seq (conj ordered-items item))
+								(recur (get-element-by-name (:next item) items) (conj ordered-items item))))))
+
+(defn remove-element
+		[elements element] (remove #(= (:id element) (:id %)) elements))
+
+(defn update-elements [element update-fn elements]
+		(if-not element
+				elements
+				(-> (remove-element elements element) (conj (update-fn)))))
+
