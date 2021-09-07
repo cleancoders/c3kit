@@ -133,7 +133,6 @@
 				(wjs/remove-listener document "mouseup" end-listener)
 				(wjs/remove-listener document "touchend" end-listener)
 				(wjs/node-remove-child (wjs/doc-body document) drag-node)
-				(println "end-drag drop-target: " drop-target)
 				(when drop-target
 						(let [[target-group target-member target-node] drop-target
 												drop-event (drag-event group member node target-group target-member target-node js-event)]
@@ -163,9 +162,11 @@
 										drag-node    (wjs/node-clone node true)
 										drag-style   (wjs/node-style drag-node)
 										dnd-state    @dnd
+										scroll-x     (.-scrollX js/window)
+										scroll-y     (.-scrollY js/window)
 										[start-x start-y] (-> dnd-state :maybe-drag :start-position)
 										[node-x node-y _ _] (wjs/node-bounds node)
-										offset       [(- start-x node-x) (- start-y node-y)]
+										offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
 										;targets (build-targets dnd-state group)
 										]
 						(wjs/node-id= drag-node "_dragndrop-drag-node_")
@@ -201,7 +202,6 @@
 
 (defn end-maybe-drag [dnd _]
 		(when-let [maybe-drag (:maybe-drag @dnd)]
-				(println "end-maybe-drag")
 				(let [{:keys [document node mouse-up-listener move-listener]} maybe-drag]
 						(wjs/remove-listener node "mousemove" move-listener)
 						(wjs/remove-listener node "mouseout" move-listener)
@@ -248,13 +248,14 @@
 
 (defn draggable-mouse-down [dnd group member node js-event]
 		(when (wjs/e-left-click? js-event)
-				(let [listener     (partial mouse-move dnd group member node)
-										doc-listener (partial end-maybe-drag dnd)
-										doc          (wjs/document node)]
+				(let [listener       (partial mouse-move dnd group member node)
+										doc-listener   (partial end-maybe-drag dnd)
+										doc            (wjs/document node)
+										start-position (wjs/e-coordinates js-event)]
 						(wjs/add-listener node "mousemove" listener)
 						(wjs/add-listener node "mouseout" listener)
 						(wjs/add-listener doc "mouseup" doc-listener)
-						(swap! dnd assoc :maybe-drag {:start-position    (wjs/e-coordinates js-event)
+						(swap! dnd assoc :maybe-drag {:start-position    start-position
 																																				:group             group
 																																				:member            member
 																																				:node              node
@@ -293,7 +294,7 @@
 		(if (some #(contains? % group) (map :targets (vals (:groups @dnd))))
 				(let [mouseenter (partial droppable-mouse-enter dnd group member node)
 										mouseleave (partial droppable-mouse-leave dnd group member node)
-										touchend (partial droppable-touch-end dnd group member node)]
+										touchend   (partial droppable-touch-end dnd group member node)]
 						(wjs/add-listener node "mouseenter" mouseenter)
 						(wjs/add-listener node "mouseleave" mouseleave)
 						(wjs/add-listener node "touchend" touchend)
@@ -367,7 +368,6 @@
 		dnd)
 
 
-(defn get-element-by-name [name items] (first (filter #(or (= name (keyword (:name %))) (= name (:name %))) items)))
 (defn get-element-by-id [id items] (first (filter #(or (= id (keyword (:id %))) (= id (:id %))) items)))
 (defn get-first-element-id [state owner] (get-in @state [owner :first-item]))
 (defn get-first-element [state items owner] (-> (get-first-element-id state owner) (get-element-by-id items)))

@@ -77,7 +77,7 @@
 						(update-previous source-previous source-truck all-trucks))
 				(swap! all-trucks #(dnd/remove-element @all-trucks source-truck))))
 
-(defn truck-drag-end [{:keys [source-key drop-target] :as drag}]
+(defn truck-drag-end [{:keys [source-key]}]
 		(when (empty? (filter #(= source-key (:id %)) @all-trucks))
 				(return-to-original-state teams-state all-trucks))
 		(swap! teams-state dissoc :dragging :hover :original-state))
@@ -86,7 +86,7 @@
 		(update-order dnd teams-state all-trucks)
 		(swap! teams-state dissoc :drop-box))
 
-(defn drag-over-truck [{:keys [source-key target-key] :as drag}]
+(defn drag-over-truck [{:keys [target-key]}]
 		(swap! teams-state assoc :drop-box target-key))
 
 (defn drag-out-truck [_]
