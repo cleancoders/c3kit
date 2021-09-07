@@ -368,24 +368,3 @@
 		dnd)
 
 
-(defn get-element-by-id [id items] (first (filter #(or (= id (keyword (:id %))) (= id (:id %))) items)))
-(defn get-first-element-id [state owner] (get-in @state [owner :first-item]))
-(defn get-first-element [state items owner] (-> (get-first-element-id state owner) (get-element-by-id items)))
-(defn get-elements-by-owner [owner items] (filter #(= owner (:owner %)) items))
-
-(defn get-items-order [items owner first-item]
-		(let [items (get-elements-by-owner owner items)]
-				(loop [item          first-item
-											ordered-items []]
-						(if-not (:next item)
-								(seq (conj ordered-items item))
-								(recur (get-element-by-id (:next item) items) (conj ordered-items item))))))
-
-(defn remove-element
-		[elements element] (remove #(= (:id element) (:id %)) elements))
-
-(defn update-elements [element update-fn elements]
-		(if-not element
-				elements
-				(-> (remove-element elements element) (conj (update-fn)))))
-
