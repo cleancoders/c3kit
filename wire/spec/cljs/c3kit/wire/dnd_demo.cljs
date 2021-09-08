@@ -30,7 +30,7 @@
 				(-> (remove-element elements element) (conj (update-fn)))))
 
 
-(def teams-state (reagent/atom {:trucks {:first-item :megalodon} :team {:first-item nil}}))
+(def monster-jam-state (reagent/atom {:trucks {:first-item :megalodon} :team {:first-item nil}}))
 (def monster-trucks (reagent/atom [{:id :megalodon :name "Megalodon" :owner :trucks :next :el-toro-loco}
 																															{:id :el-toro-loco :name "El Toro Loco" :owner :trucks :next :grave-digger}
 																															{:id :grave-digger :name "Grave Digger" :owner :trucks :next :earth-shaker}
@@ -63,11 +63,11 @@
 
 (defn move-to-new-owner [source-key target-key source-element target-element state-atom]
 		(let [new-owner      (if target-element (:owner target-element) target-key)
-								first-element  (get-first-element teams-state @monster-trucks new-owner)
+								first-element  (get-first-element monster-jam-state @monster-trucks new-owner)
 								updated-source (-> source-element (assoc :owner new-owner) (dissoc :next))]
 				(if (or (nil? target-element) (nil? first-element))
-						(move-element-to-last source-key updated-source teams-state monster-trucks)
-						(move-element-in-list source-key updated-source target-element teams-state monster-trucks))))
+						(move-element-to-last source-key updated-source monster-jam-state monster-trucks)
+						(move-element-in-list source-key updated-source target-element monster-jam-state monster-trucks))))
 
 (defn return-to-original-state [state-atom items-atom]
 		(let [{:keys [items state]} (:original-state @state-atom)]
@@ -92,43 +92,43 @@
 
 (defn truck-drag-started [{:keys [source-key]}]
 		(let [source-truck    (get-element-by-id source-key @monster-trucks)
-								first-in-list?  (= source-key (get-first-element-id teams-state (:owner source-truck)))
+								first-in-list?  (= source-key (get-first-element-id monster-jam-state (:owner source-truck)))
 								source-previous (first (filter #(= (:id source-truck) (:next %)) @monster-trucks))]
-				(swap! teams-state assoc :dragging source-key :dragged-element source-truck :hover nil :original-state {:items @monster-trucks :state @teams-state})
+				(swap! monster-jam-state assoc :dragging source-key :dragged-element source-truck :hover nil :original-state {:items @monster-trucks :state @monster-jam-state})
 				(if first-in-list?
-						(swap! teams-state assoc-in [(:owner source-truck) :first-item] (:next source-truck))
+						(swap! monster-jam-state assoc-in [(:owner source-truck) :first-item] (:next source-truck))
 						(update-previous source-previous source-truck monster-trucks))
 				(swap! monster-trucks #(remove-element @monster-trucks source-truck))))
 
 (defn truck-drag-end [{:keys [source-key]}]
 		(when (empty? (filter #(= source-key (:id %)) @monster-trucks))
-				(return-to-original-state teams-state monster-trucks))
-		(swap! teams-state dissoc :dragging :hover :original-state))
+				(return-to-original-state monster-jam-state monster-trucks))
+		(swap! monster-jam-state dissoc :dragging :hover :original-state))
 
 (defn truck-drop [dnd]
-		(update-order dnd teams-state monster-trucks)
-		(swap! teams-state dissoc :drop-box))
+		(update-order dnd monster-jam-state monster-trucks)
+		(swap! monster-jam-state dissoc :drop-truck))
 
 (defn drag-over-truck [{:keys [target-key]}]
-		(swap! teams-state assoc :drop-box target-key))
+		(swap! monster-jam-state assoc :drop-truck target-key))
 
 (defn drag-out-truck [_]
-		(swap! teams-state dissoc :drop-box))
+		(swap! monster-jam-state dissoc :drop-truck))
 
 (defn truck-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)
-								truck (get @monster-trucks (:dragging @teams-state))]
+								truck (get @monster-trucks (:dragging @monster-jam-state))]
 				[:div {:id "dragged-truck" :class "dragging-truck" :style (str "width: " width "px;") :background-color "white" :text (:name truck)}
 					[:div {:class "dragging-truck" :style {:background-color "white" :text (:name truck)}}]]
 				))
 
-(def teams-dnd (-> (dnd/context)
+(def monster-jam-dnd (-> (dnd/context)
 																	(dnd/add-group :truck)
 																	(dnd/add-group :truck-drop)
 																	(dnd/drag-from-to :truck :truck)
 																	(dnd/drag-from-to :truck :truck-drop)
 																	(dnd/on-drag-start :truck truck-drag-started)
-																	(dnd/drag-fake-hiccup-fn :truck truck-drag-fake-hiccup)
+																	(dnd/drag-fake-hiccup-fn :truck truck-drag-fake-hiccup)    
 																	(dnd/on-drop :truck truck-drop)
 																	(dnd/on-drop :truck-drop truck-drop)
 																	(dnd/on-drag-end :truck truck-drag-end)
@@ -143,7 +143,7 @@
 																	(dnd/set-drag-class :truck "dragging-truck")))
 
 (defn truck-content [truck]
-		(let [truck-id (str "-truck-" (string/replace (:name truck) #"\s" "-"))]
+		(let [truck-id (str "-truck-" (-> (:name truck) string/lower-case (string/replace #"\s" "-")))]
 				[:li.truck {:id "-truck" :style {:background-color (if (= :trucks (:owner truck)) "lightblue" "rgb(245, 183, 177)")}}
 					[:div {:id truck-id :key truck-id}
 						[:<>
@@ -151,38 +151,39 @@
 
 (defn truck-wrapper [truck]
 		(let [truck-name (:name truck)
-								wrapper-id (str "-truck-wrapper-" (string/replace truck-name #"\s" "-"))]
+								truck-id (:id truck)
+								wrapper-id (str "-truck-wrapper-" (-> truck-name string/lower-case (string/replace #"\s" "-")))]
 				[:div.-truck-wrapper {:id             wrapper-id
 																										:key            wrapper-id
-																										:on-mouse-enter #(when-not (:dragging @teams-state) (swap! teams-state assoc :hover truck-name))
-																										:on-mouse-leave #(swap! teams-state dissoc :hover)
-																										:class          (when (= truck-name (:hover @teams-state)) "grab")
-																										:ref            (dnd/register teams-dnd :truck (:id truck))
+																										:on-mouse-enter #(when-not (:dragging @monster-jam-state) (swap! monster-jam-state assoc :hover (:id truck)))
+																										:on-mouse-leave #(swap! monster-jam-state dissoc :hover)
+																										:class          (when (= truck-id (:hover @monster-jam-state)) "grab")
+																										:ref            (dnd/register monster-jam-dnd :truck truck-id)
 																										}
-					(when (= (:id truck) (:drop-box @teams-state))
+					(when (= (:id truck) (:drop-truck @monster-jam-state))
 							[:div {:id "-placeholder" :style {:height "50px" :background-color "white"}}])
 					[truck-content truck]]))
 
 (defn list-items []
 		[:div#-trucks.list-scroller
-			(let [first-truck (get-first-element teams-state @monster-trucks :trucks)
+			(let [first-truck (get-first-element monster-jam-state @monster-trucks :trucks)
 									trucks      (get-items-order @monster-trucks :trucks first-truck)]
 					[:ol#-trucks.trucks
 						(ccc/for-all [truck trucks]
 								(truck-wrapper truck))
 						[:div#-after
-							(if (= :after-trucks (:drop-box @teams-state))
-									{:style {:height "50px"} :ref (dnd/register teams-dnd :truck :after-trucks)}
-									{:style {:height "1px"} :ref (dnd/register teams-dnd :truck :after-trucks)})]])])
+							(if (= :after-trucks (:drop-truck @monster-jam-state))
+									{:style {:height "50px"} :ref (dnd/register monster-jam-dnd :truck :after-trucks)}
+									{:style {:height "1px"} :ref (dnd/register monster-jam-dnd :truck :after-trucks)})]])])
 
 (defn maybe-show-drop-box [elements]
 		(when (< (count elements) 5)
 				[:div.-placeholder-wrapper {:id    "-wrapper-end"
 																																:key   "-wrapper-end"
 																																:style {:height "500px" :background-color "white"}
-																																:ref   (dnd/register teams-dnd :truck-drop :team)
+																																:ref   (dnd/register monster-jam-dnd :truck-drop :team)
 																																}
-					(when (= :team (:drop-box @teams-state))
+					(when (= :team (:drop-truck @monster-jam-state))
 							[:div {:id "-placeholder" :style {:height "50px" :background-color "white"}}])
 					[:li.truck {:id "-truck" :style {:background-color "white"}}
 						[:div {:id "-team-after" :key "-team-after"}
@@ -190,8 +191,8 @@
 								[:span {:class "-item item-name"} [:span "Drop a Monster Truck Here"]]]]]]))
 
 (defn show-team []
-		[:div#-team.list-scroller {:ref (dnd/register teams-dnd :truck-drop :team)}
-			(let [first-truck    (get-first-element teams-state @monster-trucks :team)
+		[:div#-team.list-scroller {:ref (dnd/register monster-jam-dnd :truck-drop :team)}
+			(let [first-truck    (get-first-element monster-jam-state @monster-trucks :team)
 									ordered-trucks (when first-truck (get-items-order @monster-trucks :team first-truck))]
 					[:ol#-team.colors
 						(when ordered-trucks
