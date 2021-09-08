@@ -5,7 +5,8 @@
 			[c3kit.wire.js :as wjs]
 			[reagent.core :as reagent]
 			[reagent.dom :as dom]
-			[c3kit.apron.corec :as ccc]))
+			[c3kit.apron.corec :as ccc]
+			[clojure.string :as string]))
 
 (defn get-element-by-id [id items] (first (filter #(or (= id (keyword (:id %))) (= id (:id %))) items)))
 (defn get-first-element-id [state owner] (get-in @state [owner :first-item]))
@@ -30,7 +31,7 @@
 
 
 (def teams-state (reagent/atom {:trucks {:first-item :megalodon} :team {:first-item nil}}))
-(def all-trucks (reagent/atom [{:id :megalodon :name "Megalodon" :owner :trucks :next :el-toro-loco}
+(def monster-trucks (reagent/atom [{:id :megalodon :name "Megalodon" :owner :trucks :next :el-toro-loco}
 																															{:id :el-toro-loco :name "El Toro Loco" :owner :trucks :next :grave-digger}
 																															{:id :grave-digger :name "Grave Digger" :owner :trucks :next :earth-shaker}
 																															{:id :earth-shaker :name "EarthShaker" :owner :trucks :next :son-uva-digger}
@@ -62,11 +63,11 @@
 
 (defn move-to-new-owner [source-key target-key source-element target-element state-atom]
 		(let [new-owner      (if target-element (:owner target-element) target-key)
-								first-element  (get-first-element teams-state @all-trucks new-owner)
+								first-element  (get-first-element teams-state @monster-trucks new-owner)
 								updated-source (-> source-element (assoc :owner new-owner) (dissoc :next))]
 				(if (or (nil? target-element) (nil? first-element))
-						(move-element-to-last source-key updated-source teams-state all-trucks)
-						(move-element-in-list source-key updated-source target-element teams-state all-trucks))))
+						(move-element-to-last source-key updated-source teams-state monster-trucks)
+						(move-element-in-list source-key updated-source target-element teams-state monster-trucks))))
 
 (defn return-to-original-state [state-atom items-atom]
 		(let [{:keys [items state]} (:original-state @state-atom)]
@@ -90,22 +91,22 @@
 				(reset! items-atom updated-elements)))
 
 (defn truck-drag-started [{:keys [source-key]}]
-		(let [source-truck    (get-element-by-id source-key @all-trucks)
+		(let [source-truck    (get-element-by-id source-key @monster-trucks)
 								first-in-list?  (= source-key (get-first-element-id teams-state (:owner source-truck)))
-								source-previous (first (filter #(= (:id source-truck) (:next %)) @all-trucks))]
-				(swap! teams-state assoc :dragging source-key :dragged-element source-truck :hover nil :original-state {:items @all-trucks :state @teams-state})
+								source-previous (first (filter #(= (:id source-truck) (:next %)) @monster-trucks))]
+				(swap! teams-state assoc :dragging source-key :dragged-element source-truck :hover nil :original-state {:items @monster-trucks :state @teams-state})
 				(if first-in-list?
 						(swap! teams-state assoc-in [(:owner source-truck) :first-item] (:next source-truck))
-						(update-previous source-previous source-truck all-trucks))
-				(swap! all-trucks #(remove-element @all-trucks source-truck))))
+						(update-previous source-previous source-truck monster-trucks))
+				(swap! monster-trucks #(remove-element @monster-trucks source-truck))))
 
 (defn truck-drag-end [{:keys [source-key]}]
-		(when (empty? (filter #(= source-key (:id %)) @all-trucks))
-				(return-to-original-state teams-state all-trucks))
+		(when (empty? (filter #(= source-key (:id %)) @monster-trucks))
+				(return-to-original-state teams-state monster-trucks))
 		(swap! teams-state dissoc :dragging :hover :original-state))
 
 (defn truck-drop [dnd]
-		(update-order dnd teams-state all-trucks)
+		(update-order dnd teams-state monster-trucks)
 		(swap! teams-state dissoc :drop-box))
 
 (defn drag-over-truck [{:keys [target-key]}]
@@ -116,7 +117,7 @@
 
 (defn truck-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)
-								truck (get @all-trucks (:dragging @teams-state))]
+								truck (get @monster-trucks (:dragging @teams-state))]
 				[:div {:id "dragged-truck" :class "dragging-truck" :style (str "width: " width "px;") :background-color "white" :text (:name truck)}
 					[:div {:class "dragging-truck" :style {:background-color "white" :text (:name truck)}}]]
 				))
@@ -142,7 +143,7 @@
 																	(dnd/set-drag-class :truck "dragging-truck")))
 
 (defn truck-content [truck]
-		(let [truck-id (str "-truck-" (:name truck))]
+		(let [truck-id (str "-truck-" (string/replace (:name truck) #"\s" "-"))]
 				[:li.truck {:id "-truck" :style {:background-color (if (= :trucks (:owner truck)) "lightblue" "rgb(245, 183, 177)")}}
 					[:div {:id truck-id :key truck-id}
 						[:<>
@@ -150,7 +151,7 @@
 
 (defn truck-wrapper [truck]
 		(let [truck-name (:name truck)
-								wrapper-id (str "-truck-wrapper-" truck-name)]
+								wrapper-id (str "-truck-wrapper-" (string/replace truck-name #"\s" "-"))]
 				[:div.-truck-wrapper {:id             wrapper-id
 																										:key            wrapper-id
 																										:on-mouse-enter #(when-not (:dragging @teams-state) (swap! teams-state assoc :hover truck-name))
@@ -164,8 +165,8 @@
 
 (defn list-items []
 		[:div#-trucks.list-scroller
-			(let [first-truck (get-first-element teams-state @all-trucks :trucks)
-									trucks      (get-items-order @all-trucks :trucks first-truck)]
+			(let [first-truck (get-first-element teams-state @monster-trucks :trucks)
+									trucks      (get-items-order @monster-trucks :trucks first-truck)]
 					[:ol#-trucks.trucks
 						(ccc/for-all [truck trucks]
 								(truck-wrapper truck))
@@ -190,8 +191,8 @@
 
 (defn show-team []
 		[:div#-team.list-scroller {:ref (dnd/register teams-dnd :truck-drop :team)}
-			(let [first-truck    (get-first-element teams-state @all-trucks :team)
-									ordered-trucks (when first-truck (get-items-order @all-trucks :team first-truck))]
+			(let [first-truck    (get-first-element teams-state @monster-trucks :team)
+									ordered-trucks (when first-truck (get-items-order @monster-trucks :team first-truck))]
 					[:ol#-team.colors
 						(when ordered-trucks
 								(ccc/for-all [truck ordered-trucks]
@@ -204,7 +205,7 @@
 			[:p "Select 5 to Build Your Jam Team"]
 			[:div#lists.list-container
 				[:div.team-container
-					[:h3 (str "Jam Team - " (count (filter #(= :team (:owner %)) @all-trucks)) " Monster Trucks")]
+					[:h3 (str "Jam Team - " (count (filter #(= :team (:owner %)) @monster-trucks)) " Monster Trucks")]
 					[show-team]]
 				[:div#-trucks.team-container
 					[:h3 "Monster Trucks"]
@@ -243,25 +244,30 @@
 		(swap! rainbow-state dissoc :drop-color))
 
 (defn color-drag-fake-hiccup [node]
-		(let [width (.-clientWidth node)
-								color (get @colors (:dragging @rainbow-state))]
-				[:div {:id "dragged-color" :class "dragging-color" :style (str "width: " width "px;") :background-color "white" :text (:color color)}
+		(let [color (:dragged-element @rainbow-state)]
+				[:div {:id "dragged-color" :class "dragging-color" :style {:background-color "white" :text (:color color)}}
 					[:div {:class "dragging-color" :style {:background-color "white" :text (:color color)}}]]
 				))
 
 (def rainbow-dnd (-> (dnd/context)
 																			(dnd/add-group :color)
-																			(dnd/add-group :color)
+																			;(dnd/add-group :color-drop)
 																			(dnd/drag-from-to :color :color)
+																			;(dnd/drag-from-to :color :color-drop)
 																			(dnd/on-drag-start :color color-drag-started)
 																			(dnd/drag-fake-hiccup-fn :color color-drag-fake-hiccup)
 																			;(dnd/on-drag :color move-ball)
 																			(dnd/on-drop :color color-drop)
+																			;(dnd/on-drop :color-drop color-drop)
 																			(dnd/on-drag-end :color color-drag-end)
 																			(dnd/on-drag-over :color #(println "color drag-over"))
 																			(dnd/on-drag-over :color drag-over-color)
+																			;(dnd/on-drag-over :color-drop #(println "color-drop drag-over"))
+																			;(dnd/on-drag-over :color-drop drag-over-color)
 																			(dnd/on-drag-out :color #(println "color drag-out"))
 																			(dnd/on-drag-out :color drag-out-color)
+																			;(dnd/on-drag-out :color-drop #(println "color-drop drag-out"))
+																			;(dnd/on-drag-out :color-drop drag-out-color)
 																			(dnd/set-drag-class :color "dragging-color")))
 
 (defn color-content [color]
@@ -276,7 +282,6 @@
 								wrapper-id (str "-color-wrapper-" color-name)]
 				[:div.-color-wrapper {:id             wrapper-id
 																										:key            wrapper-id
-																										;:style          (when (= (:id color) (:drop-color @rainbow-state)) {:height "100px" :background-color "white"})
 																										:on-mouse-enter #(when-not (:dragging @rainbow-state) (swap! rainbow-state assoc :hover (:id color)))
 																										:on-mouse-leave #(swap! rainbow-state dissoc :hover)
 																										:class          (when (= (:id color) (:hover @rainbow-state)) "grab")
@@ -347,24 +352,24 @@
 			[:div {:style {:display "flex"}}
 				[:div.golf-green
 					(when-not (= :ball-1 (:dragging @golf-state))
-							[:div.golf-ball {:style          (:ball-location @golf-state)
+							[:div#ball-1.golf-ball {:style          (:ball-location @golf-state)
 																								:on-mouse-enter #(swap! golf-state assoc :hover :ball-1)
 																								:on-mouse-leave #(swap! golf-state dissoc :hover)
 																								:class          (when (= :ball-1 (:hover @golf-state)) "grab")
 																								:ref            (dnd/register golf-dnd :ball :ball-1)}])
-					[:div.golf-hole {:style          (:hole-location @golf-state)
+					[:div#hole-1.golf-hole {:style          (:hole-location @golf-state)
 																						:class          (when (= :hole-1 (:drop-hole @golf-state)) "hole-hover")
 																						:on-mouse-enter #(println "hole mouse enter")
 																						:ref            (dnd/register golf-dnd :hole :hole-1)}]]
 				[:div.golf-scroller
 					[:div.golf-green
 						(when-not (= :ball-2 (:dragging @golf-state))
-								[:div.golf-ball {:style          (:ball-location @golf-state)
+								[:div#ball-2.golf-ball {:style          (:ball-location @golf-state)
 																									:on-mouse-enter #(swap! golf-state assoc :hover :ball-2)
 																									:on-mouse-leave #(swap! golf-state dissoc :hover)
 																									:class          (when (= :ball-2 (:hover @golf-state)) "grab")
 																									:ref            (dnd/register golf-dnd :ball :ball-2)}])
-						[:div.golf-hole {:style (:hole-location @golf-state)
+						[:div#hole-2.golf-hole {:style (:hole-location @golf-state)
 																							:class (when (= :hole-2 (:drop-hole @golf-state)) "hole-hover")
 																							:ref   (dnd/register golf-dnd :hole :hole-2)}]]]]])
 

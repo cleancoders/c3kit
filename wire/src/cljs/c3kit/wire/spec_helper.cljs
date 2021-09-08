@@ -125,6 +125,16 @@
   ([thing] (mouse-enter thing) (flush))
   ([root selector] (mouse-enter root selector) (flush)))
 
+(defn mouse-down
+  ([thing]
+   ((.-mouseDown simulator) (resolve-node :mouse-down thing)))
+  ([root selector]
+   (mouse-down (resolve-node :mouse-down root selector))))
+
+(defn mouse-down!
+  ([thing] (mouse-down thing) (flush))
+  ([root selector] (mouse-down root selector) (flush)))
+
 (defn mouse-leave
   ([thing]
    ((.-mouseLeave simulator) (resolve-node :mouse-leave thing)))

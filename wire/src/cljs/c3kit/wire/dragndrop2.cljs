@@ -15,8 +15,10 @@
 (def dnd-structure
 		{:groups      {:group-key-1 {:members    {:member-key-1 {:node                 "dom node"
 																																																											:draggable-mousedown  "mousedown listener to start drag"
+																																																											:draggable-touchstart "touchstart listener to start drag"
 																																																											:droppable-mouseenter "mouseenter listener to dragover"
-																																																											:droppable-mouseleave "mouseleave listener to end dragover"}}
+																																																											:droppable-mouseleave "mouseleave listener to end dragover"
+																																																											:droppable-touchend   "touchend listener to end drag"}}
 																															:targets    #{"target group keys"}
 																															:drag-class "css class that will be added to drag-node when being dragged"
 																															:listeners  {:drag-start ["drag event handlers"]
@@ -298,7 +300,7 @@
 						(wjs/add-listener node "mouseenter" mouseenter)
 						(wjs/add-listener node "mouseleave" mouseleave)
 						(wjs/add-listener node "touchend" touchend)
-						(assoc data :droppable-mouseenter mouseenter :droppable-mouseleave mouseleave))
+						(assoc data :droppable-mouseenter mouseenter :droppable-mouseleave mouseleave :droppable-touchend touchend))
 				data))
 
 (defn register [dnd group member]

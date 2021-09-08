@@ -4,12 +4,49 @@
                                         should-contain should-not-contain should should-not-have-invoked stub]]
                    [c3kit.wire.spec-helperc :refer [should-select should-not-select]])
   (:require
-    [c3kit.wire.dragndrop :as sut]
-    [c3kit.wire.spec-helper :as helper]
-    ))
+   [c3kit.wire.dragndrop2 :as sut]
+   [c3kit.wire.spec-helper :as helper]
+   [c3kit.apron.log :as log]
+   [c3kit.wire.dnd-demo :as demo]
+   ))
+
+(defn test-content []
+  [:div
+   [:div
+    [:h1 "Test Page"]
+    [demo/rainbow-demo]]])
+
+(def dnd (-> (sut/context)
+           (sut/add-group :color)
+           (sut/add-group :color-drop)
+           (sut/drag-from-to :color :color-drop)
+           (sut/on-drag-start :color (fn [dnd] (assoc dnd :on-drag-start true)))
+           ;(sut/drag-fake-hiccup-fn :color color-drag-fake-hiccup)
+           (sut/on-drop :color-drop (fn [dnd] (assoc dnd :on-drop true)))
+           (sut/on-drag-end :color (fn [dnd] (assoc dnd :on-drag-end true)))
+           (sut/on-drag-over :color #(println "color drag-over"))
+           (sut/on-drag-over :color-drop (fn [dnd] (assoc dnd :on-drag-over true)))
+           (sut/on-drag-out :color #(println "color drag-out"))
+           (sut/on-drag-out :color-drop (fn [dnd] (assoc dnd :on-drag-out true)))
+           (sut/set-drag-class :color "dragging-color")))
 
 (describe "Drag and Drop"
+  (helper/with-root-dom)
+  (before (helper/render [test-content]
+      ))
 
+  (it "registers an unknown group"
+    (sut/register dnd :not-a-color :dog)
+    (should-be-nil (get-in dnd [:groups :color :members :dog]))
+    (should-be-nil (get-in dnd [:groups :not-a-color :members :dog]))
+    )
+
+  (it "registers a draggable"
+    (sut/register dnd :color :cerulean)
+    (should= :cerulean (first (get-in @dnd [:groups :color :members])))
+    (should= #{:color-drop} (get-in @dnd [:groups :color :targets]))
+    ;(should= :cerulean (get-in @dnd [:groups :color]))
+    )
 
 
   )

@@ -88,13 +88,13 @@ ol {
     list-style-type: none;
     padding: 0px;
     margin: 0px;
-    width: 500px;
+    width: 300px;
 }
 
 li.color {
     padding: 0;
     height: 50px;
-    width: 300px;
+    width: auto;
     position: center;
     list-style-type: none;
     text-align: center;
@@ -112,7 +112,9 @@ li.color {
     height: 50px;
     list-style-type: none;
     text-align: center;
-    border: 1px solid lightgrey;
+    border: 2px solid lightgrey;
+    background-color: white;
+    transform: rotate(2deg);
 }
 
 
@@ -128,17 +130,19 @@ li.color {
 .dragging-truck {
     cursor: grabbing !important;
     padding: 0;
-    width: 400px;
+    width: 300px;
     height: 50px;
     list-style-type: none;
     text-align: center;
     border: 1px solid lightgrey;
+    background-color: coral;
+    transform: rotate(2deg);
 }
 
 li.truck {
     padding: 0;
     height: 50px;
-    width: 300px;
+    width: auto;
     position: center;
     list-style-type: none;
     text-align: center;
