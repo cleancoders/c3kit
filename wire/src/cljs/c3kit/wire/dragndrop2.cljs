@@ -1,4 +1,5 @@
 (ns c3kit.wire.dragndrop2
+		(:import [goog History])
 		(:require
 			[c3kit.apron.log :as log]
 			[c3kit.wire.dnd-mobile-patch]
@@ -8,7 +9,9 @@
 			[goog.fx.DragDropGroup]
 			[goog.fx.DragDrop]
 			[c3kit.wire.js :as wjs]
-			[c3kit.apron.corec :as ccc]))
+			[c3kit.apron.corec :as ccc]
+			[goog.object :as gobject]
+			))
 
 (def drag-threshold 5)
 
@@ -53,11 +56,13 @@
 
 (defn drag-event
 		([source-group source-key source-node event]
+			(println "hello drag event!")
 			{:source-group  source-group
 				:source-key    source-key
 				:source-node   source-node
 				:browser-event (.preventDefault event)})
 		([source-group source-key source-node target-group target-key target-node event]
+			(println "hello drag event!")
 			(assoc (drag-event source-group source-key source-node event)
 					:target-group target-group
 					:target-key target-key
@@ -133,8 +138,6 @@
 										[node-x node-y _ _] (wjs/node-bounds node)
 										offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
 										]
-						(println "[node-x node-y]: " [node-x node-y])
-						(println "offset: " offset)
 						(wjs/node-id= drag-node "_dragndrop-drag-node_")
 						(wjs/o-set drag-style "position" "absolute")
 						(wjs/o-set drag-style "pointer-events" "none")        ;; allow wheel events to scroll containers, but prevents mouse-over
@@ -330,7 +333,7 @@
 
 (defn drag-fake-hiccup-fn [dnd group-key fake-hiccup-fn]
 		(set! (.-createDragElement (get-group dnd group-key))
-				(fn [node] (fake-hiccup->dom (fake-hiccup-fn node))))
+				(fn [node] (println "node: " node) (println "(fake-hiccup-fn node): " (fake-hiccup-fn node)) (fake-hiccup->dom (fake-hiccup-fn node))))
 		dnd)
 
 
