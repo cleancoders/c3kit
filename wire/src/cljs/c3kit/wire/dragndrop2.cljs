@@ -54,13 +54,15 @@
 				group
 				(throw (ex-info (str "DnD group missing: " group) {:group group :dnd dnd}))))
 
+(defn prevent-default [event] (.preventDefault event))
+
 (defn drag-event
 		([source-group source-key source-node event]
 			(println "hello drag event!")
 			{:source-group  source-group
 				:source-key    source-key
 				:source-node   source-node
-				:browser-event (.preventDefault event)})
+				:browser-event (prevent-default event)})
 		([source-group source-key source-node target-group target-key target-node event]
 			(println "hello drag event!")
 			(assoc (drag-event source-group source-key source-node event)
@@ -123,6 +125,19 @@
 								grouped-targets   (map group->targets target-groups)]
 				(apply concat grouped-targets)))
 
+(defn append-dragger! [doc drag-node drag-class drag-style]
+		(wjs/node-id= drag-node "_dragndrop-drag-node_")
+		(wjs/o-set drag-style "position" "absolute")
+		(wjs/o-set drag-style "pointer-events" "none")        ;; allow wheel events to scroll containers, but prevents mouse-over
+		(when drag-class (wjs/node-add-class drag-node drag-class))
+		(wjs/node-append-child (wjs/doc-body doc) drag-node))
+
+(defn add-doc-listeners [doc drag-handler end-handler]
+		(wjs/add-listener doc "mousemove" drag-handler)
+		(wjs/add-listener doc "touchmove" drag-handler)
+		(wjs/add-listener doc "mouseup" end-handler)
+		(wjs/add-listener doc "touchend" end-handler))
+
 (defn start-drag [dnd group member node js-event]
 		(when (dispatch-event dnd group :drag-start (drag-event group member node js-event))
 				(let [drag-handler (partial handle-drag dnd)
@@ -138,17 +153,8 @@
 										[node-x node-y _ _] (wjs/node-bounds node)
 										offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
 										]
-						(wjs/node-id= drag-node "_dragndrop-drag-node_")
-						(wjs/o-set drag-style "position" "absolute")
-						(wjs/o-set drag-style "pointer-events" "none")        ;; allow wheel events to scroll containers, but prevents mouse-over
-						(when drag-class (wjs/node-add-class drag-node drag-class))
-						(wjs/node-append-child (wjs/doc-body doc) drag-node)
-
-						(wjs/add-listener doc "mousemove" drag-handler)
-						(wjs/add-listener doc "touchmove" drag-handler)
-						(wjs/add-listener doc "mouseup" end-handler)
-						(wjs/add-listener doc "touchend" end-handler)
-
+						(append-dragger! doc drag-node drag-class drag-style)
+						(add-doc-listeners doc drag-handler end-handler)
 						(swap! dnd assoc :active-drag {:group         group
 																																					:member        member
 																																					:node          node
@@ -174,7 +180,7 @@
 (defn touch-move [dnd group member node js-event]
 		(println "touch-move!")
 		(let [[start-x start-y] (-> @dnd :maybe-drag :start-position)
-								touches      (first (.-touches js-event))
+								touches          (first (.-touches js-event))
 								[x y] [(.-clientX touches) (.-clientY touches)]
 								;[x y] (wjs/e-coordinates js-event)
 								distance         (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
@@ -189,10 +195,10 @@
 
 (defn draggable-touch-start [dnd group member node js-event]
 		(println "touch start!")
-		(let [listener     (partial touch-move dnd group member node)
-								doc-listener (partial end-maybe-drag dnd)
-								doc          (wjs/document node)
-								touches      (first (.-touches js-event))
+		(let [listener       (partial touch-move dnd group member node)
+								doc-listener   (partial end-maybe-drag dnd)
+								doc            (wjs/document node)
+								touches        (first (.-touches js-event))
 								start-position [(.-clientX touches) (.-clientY touches)]]
 				(println "start-position: " start-position)
 				(wjs/add-listener node "touchmove" listener)
@@ -248,6 +254,7 @@
 						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
 
 (defn droppable-mouse-enter [dnd target-group target-member target-node js-event]
+		(println "MOUSE ENTER")
 		(when-let [{:keys [group member node]} (:active-drag @dnd)]
 				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-over)
 						(prn "drag-over success")
@@ -272,7 +279,7 @@
 
 (defn register [dnd group member]
 		(fn [node]
-				(when-not (get-in @dnd [:groups group]) (log/warn "registering to unknown group:" group member))
+				(when-not (get-in @dnd [:groups group]) (println "registering to unknown group:") (log/warn "registering to unknown group:" group member))
 				(if node
 						(let [member-data (-> {:node node}
 																										(maybe-make-draggable! dnd group member)
