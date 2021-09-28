@@ -4,13 +4,11 @@
 			[c3kit.apron.log :as log]
 			[c3kit.wire.dnd-mobile-patch]
 			[goog.dom :as dom]
-			[goog.events :as events]
 			[goog.events.EventHandler]
 			[goog.fx.DragDropGroup]
 			[goog.fx.DragDrop]
 			[c3kit.wire.js :as wjs]
 			[c3kit.apron.corec :as ccc]
-			[goog.object :as gobject]
 			))
 
 (def drag-threshold 5)
@@ -58,13 +56,11 @@
 
 (defn drag-event
 		([source-group source-key source-node event]
-			(println "hello drag event!")
 			{:source-group  source-group
 				:source-key    source-key
 				:source-node   source-node
 				:browser-event (prevent-default event)})
 		([source-group source-key source-node target-group target-key target-node event]
-			(println "hello drag event!")
 			(assoc (drag-event source-group source-key source-node event)
 					:target-group target-group
 					:target-key target-key
@@ -78,8 +74,8 @@
 								(recur (rest listeners)))
 						true)))
 
-(defn update-drag-node-position [dnd js-event]
-		(let [{:keys [drag-node offset]} (:active-drag @dnd)
+(defn update-drag-node-position [dnd-map js-event]
+		(let [{:keys [drag-node offset]} (:active-drag dnd-map)
 								drag-style (wjs/node-style drag-node)
 								[x y] (wjs/e-coordinates js-event)
 								[offset-x offset-y] offset]
@@ -125,10 +121,10 @@
 								grouped-targets   (map group->targets target-groups)]
 				(apply concat grouped-targets)))
 
-(defn append-dragger! [doc drag-node drag-class drag-style]
+(defn append-dragger [doc drag-node drag-class drag-style]
 		(wjs/node-id= drag-node "_dragndrop-drag-node_")
 		(wjs/o-set drag-style "position" "absolute")
-		(wjs/o-set drag-style "pointer-events" "none")        ;; allow wheel events to scroll containers, but prevents mouse-over
+		(wjs/o-set drag-style "pointer-events" "none")            ;; allow wheel events to scroll containers, but prevents mouse-over
 		(when drag-class (wjs/node-add-class drag-node drag-class))
 		(wjs/node-append-child (wjs/doc-body doc) drag-node))
 
@@ -152,20 +148,20 @@
 										[start-x start-y] (-> dnd-state :maybe-drag :start-position)
 										[node-x node-y _ _] (wjs/node-bounds node)
 										offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
-										]
-						(append-dragger! doc drag-node drag-class drag-style)
+										active-drag  {:group         group
+																								:member        member
+																								:node          node
+																								:drag-node     drag-node
+																								:offset        offset
+																								:document      doc
+																								:drag-listener drag-handler
+																								:end-listener  end-handler
+																								}]
+						(append-dragger doc drag-node drag-class drag-style)
 						(add-doc-listeners doc drag-handler end-handler)
-						(swap! dnd assoc :active-drag {:group         group
-																																					:member        member
-																																					:node          node
-																																					:drag-node     drag-node
-																																					:offset        offset
-																																					:document      doc
-																																					:drag-listener drag-handler
-																																					:end-listener  end-handler
-																																					;:targets       targets
-																																					})
-						(update-drag-node-position dnd js-event)))
+						(-> dnd
+								(swap! assoc :active-drag active-drag)
+								(update-drag-node-position js-event))))
 		(wjs/nod js-event)
 		)
 

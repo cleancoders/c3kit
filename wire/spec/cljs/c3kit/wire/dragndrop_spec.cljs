@@ -15,12 +15,13 @@
 
 (def blank-dnd (sut/context))
 (def pets [{:id "tails" :name "Tails"} {:id "brusly" :name "Brusly"} {:id "cheddar" :name "Cheddar"} {:id "wasabi" :name "Wasabi"}])
+(def state (atom {}))
 
-(defn drag-start [] "on-drag-start")
-(defn drag-over [] "on-drag-over")
-(defn drag-out [] "on-drag-out")
-(defn drop! [] "on-drag-drop")
-(defn drag-end [] "on-drag-end")
+(defn drag-start [{:keys [source-key]}] (swap! state assoc :last-call :drag-start :source-key source-key) "on-drag-start")
+(defn drag-over [{:keys [target-key]}] (swap! state assoc :last-call :drag-over :target-key target-key) "on-drag-over")
+(defn drag-out [_] (swap! state merge (-> @state (assoc :last-call :drag-out) (dissoc :target-key))) "on-drag-out")
+(defn drop! [{:keys [target-key]}] (swap! state assoc :last-call :drop! :drop-target target-key) "on-drag-drop")
+(defn drag-end [_] (reset! state {:last-call :drag-end}) "on-drag-end")
 (defn fake-hiccup [] [:div {:id "dragging-pet"}
 																						[:div "a dragging pet"]])
 
@@ -30,6 +31,7 @@
 																							(sut/add-group :pet)
 																							(sut/add-group :pet-drop)
 																							(sut/drag-from-to :pet :pet-drop)
+																							(sut/on-drag-start :pet #(println "drag start"))
 																							(sut/on-drag-start :pet drag-start)
 																							(sut/drag-fake-hiccup-fn :pet fake-hiccup)
 																							(sut/on-drop :pet drop!)
@@ -120,7 +122,7 @@
 																registration-types (map #(second %) registrations)]
 												(should-contain "mousedown" registration-types)
 												(should-contain "touchstart" registration-types)
-												(should= [drag-start] (get-in @dnd [:groups :pet :listeners :drag-start]))
+												(should-contain drag-start (get-in @dnd [:groups :pet :listeners :drag-start]))
 												(should-contain drag-over (get-in @dnd [:groups :pet :listeners :drag-over]))
 												(should-contain drag-out (get-in @dnd [:groups :pet :listeners :drag-out]))
 												(should-contain drag-end (get-in @dnd [:groups :pet :listeners :drag-end]))
@@ -179,62 +181,66 @@
 												(let [mousedown (:draggable-mousedown @dragger)]
 														(mousedown (clj->js {:button 0 :clientX 0 :clientY 0}))))
 
-										(context "maybe drag"
-												(it "mouse up with no valid movement"
-														(let [remove-listeners-before (map #(second %) (stub/invocations-of :remove-listener))
-																				mouseup                 (get-in @dnd [:maybe-drag :mouse-up-listener])
-																				_                       (mouseup {})
-																				remove-listeners-after  (map #(second %) (stub/invocations-of :remove-listener))]
-																(should-not-contain :maybe-drag @dnd)
-																(should= 3 (- (count remove-listeners-after) (count remove-listeners-before)))
-																(should-contain "mousemove" remove-listeners-after)
-																(should-contain "mouseout" remove-listeners-after)
-																(should-contain "mouseup" remove-listeners-after)))
+										(context "draggable"
+												(context "maybe drag"
+														(it "mouse up with no valid movement"
+																(let [remove-listeners-before (map #(second %) (stub/invocations-of :remove-listener))
+																						mouseup                 (get-in @dnd [:maybe-drag :mouse-up-listener])
+																						_                       (mouseup {})
+																						remove-listeners-after  (map #(second %) (stub/invocations-of :remove-listener))]
+																		(should-not-contain :maybe-drag @dnd)
+																		(should= 3 (- (count remove-listeners-after) (count remove-listeners-before)))
+																		(should-contain "mousemove" remove-listeners-after)
+																		(should-contain "mouseout" remove-listeners-after)
+																		(should-contain "mouseup" remove-listeners-after)))
 
-												(it "movement below threshold"
-														(with-redefs [sut/start-drag (stub :start-drag)]
-																(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-																		(mousemove-handler (clj->js {:clientX 2 :clientY 2}))
-																		(should-not-have-invoked :start-drag)
-																		(should-contain :maybe-drag @dnd))))
+														(it "movement below threshold"
+																(with-redefs [sut/start-drag (stub :start-drag)]
+																		(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
+																				(mousemove-handler (clj->js {:clientX 2 :clientY 2}))
+																				(should-not-have-invoked :start-drag)
+																				(should-contain :maybe-drag @dnd))))
 
-												(it "valid movement - above threshold"
-														(with-redefs [sut/start-drag (stub :start-drag)]
-																(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-																		(mousemove-handler (clj->js {:clientX 10 :clientY 10}))
-																		(should-have-invoked :start-drag)
-																		(should-have-invoked :nod)
-																		(should-not-contain :maybe-drag @dnd))))
+														(it "valid movement - above threshold"
+																(with-redefs [sut/start-drag (stub :start-drag)]
+																		(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
+																				(mousemove-handler (clj->js {:clientX 10 :clientY 10}))
+																				(should-have-invoked :start-drag)
+																				(should-have-invoked :nod)
+																				(should-not-contain :maybe-drag @dnd))))
 
-												(it "valid movement - mouseout"
-														(with-redefs [sut/start-drag (stub :start-drag)]
-																(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-																		(mousemove-handler (clj->js {:type "mouseout" :target @drag-node}))
-																		(should-have-invoked :nod)
-																		(should-have-invoked :start-drag)
-																		(should-not-contain :maybe-drag @dnd))))
+														(it "valid movement - mouseout"
+																(with-redefs [sut/start-drag (stub :start-drag)]
+																		(let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
+																				(mousemove-handler (clj->js {:type "mouseout" :target @drag-node}))
+																				(should-have-invoked :nod)
+																				(should-have-invoked :start-drag)
+																				(should-not-contain :maybe-drag @dnd))))
+														)
+
+												(context "start drag"
+														(it "false dispatch-event"
+																(with-redefs [sut/dispatch-event (stub :dispatch {:return false})]
+																		(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {}))
+																		(should-not-contain :active-drag @dnd)))
+
+														(it "success"
+																(with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
+																		(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+																		(let [doc-listeners (map #(second %) (filter #(= (wjs/document @drag-node) (first %)) (stub/invocations-of :add-listener)))
+																								node-style    (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
+																				(should-contain :active-drag @dnd)
+																				(should= 5 (count doc-listeners))
+																				(should-contain "mousemove" doc-listeners)
+																				(should= "10px" (wjs/o-get node-style "left"))
+																				(should= "10px" (wjs/o-get node-style "top"))
+																				(should= :drag-start (:last-call @state))
+																				(println "@state: " @state)
+																				(should= "brusly" (:source-key @state)))))
+														)
 												)
 
-										(context "start drag"
-												(before (swap! dnd assoc-in [:maybe-drag :start-position] [0 0]))
-
-												(it "false dispatch-event"
-														(with-redefs [sut/dispatch-event (stub :dispatch {:return false})
-																												wjs/node-bounds (stub :bounds {:return [10 10]})]
-																(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {}))
-																(should-not-contain :active-drag @dnd)))
-
-												(it "true start-drag"
-														(with-redefs [sut/dispatch-event (stub :dispatch {:return true})
-																												wjs/node-bounds (stub :bounds {:return [10 10]})]
-																(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
-																(let [doc-listeners  (map #(second %) (filter #(= (wjs/document @drag-node) (first %)) (stub/invocations-of :add-listener)))
-																						node-style (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
-																		(should-contain :active-drag @dnd)
-																		(should= 5 (count doc-listeners))
-																		(should-contain "mousemove" doc-listeners)
-																		(should= "10px"  (wjs/o-get node-style "left"))
-																		(should= "10px" (wjs/o-get node-style "top")))))
+										(context "droppable"
 												)
 										)
 								)
