@@ -117,7 +117,6 @@
 										(let [registrations      (stub/invocations-of :add-listener)
 																registration-types (map #(second %) registrations)]
 												(should-contain "mousedown" registration-types)
-												(should-contain "touchstart" registration-types)
 												(should-contain drag-start (get-in @dnd [:groups :pet :listeners :drag-start]))
 												(should-contain drag-over (get-in @dnd [:groups :pet :listeners :drag-over]))
 												(should-contain drag-out (get-in @dnd [:groups :pet :listeners :drag-out]))
@@ -129,16 +128,15 @@
 																registration-types (map #(second %) registrations)]
 												(should-contain "mouseenter" registration-types)
 												(should-contain "mouseleave" registration-types)
-												(should-contain "touchend" registration-types)
 												(should-contain drag-out (get-in @dnd [:groups :pet :listeners :drag-out]))
 												(should-contain drag-over (get-in @dnd [:groups :pet-drop :listeners :drag-over]))
 												(should-contain drag-out (get-in @dnd [:groups :pet-drop :listeners :drag-out]))
 												(should-contain drop! (get-in @dnd [:groups :pet-drop :listeners :drop]))))
 
 								(it "registers draggables & droppables"
-										(let [draggables [:node :draggable-mousedown :draggable-touchstart]
-																droppables [:node :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
-												(should-have-invoked :add-listener {:times 14})
+										(let [draggables [:node :draggable-mousedown]
+																droppables [:node :droppable-mouseenter :droppable-mouseleave]]
+												(should-have-invoked :add-listener {:times 8})
 												(should= ["brusly" "tails" "cheddar" "wasabi"] (keys (get-in @dnd [:groups :pet :members])))
 												(should= #{:pet-drop} (get-in @dnd [:groups :pet :targets]))
 												(should= ["dog-drop" "cat-drop"] (keys (get-in @dnd [:groups :pet-drop :members])))
@@ -227,7 +225,7 @@
 														(let [doc-listeners (get-doc-listeners :add-listener)
 																				node-style    (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
 																(should-contain :active-drag @dnd)
-																(should= 5 (count doc-listeners))
+																(should= 3 (count doc-listeners))
 																(should-contain "mousemove" doc-listeners)
 																(should= [-10 -10] (get-in @dnd [:active-drag :offset]))
 																(should= "10px" (wjs/o-get node-style "left"))
@@ -298,7 +296,7 @@
 																						rmv-listeners-before (get-doc-listeners :remove-listener)]
 																		(mouseenter (clj->js {}))
 																		(mouseup (clj->js {}))
-																		(should= 4 (- (count (get-doc-listeners :remove-listener)) (count rmv-listeners-before)))
+																		(should= 2 (- (count (get-doc-listeners :remove-listener)) (count rmv-listeners-before)))
 																		(should= "dog-drop" (:drop @state))
 																		(should= :drag-end (:last-call @state))
 																		(should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
