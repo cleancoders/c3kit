@@ -14,7 +14,8 @@
 			[speclj.stub :as stub]))
 
 (def blank-dnd (sut/context))
-(def pets [{:id "tails" :name "Tails"} {:id "brusly" :name "Brusly"} {:id "cheddar" :name "Cheddar"} {:id "wasabi" :name "Wasabi"}])
+(def pets ["brusly" "cheddar"])
+(def treats ["bone" "catnip"])
 (def state (atom {}))
 
 (defn drag-start [{:keys [source-key]}] (swap! state assoc :last-call :drag-start :source-key source-key) "on-drag-start")
@@ -22,36 +23,34 @@
 (defn drag-out [_] (reset! state {:last-call :drag-out}) "on-drag-out")
 (defn drop! [{:keys [target-key]}] (swap! state assoc :drop target-key) "on-drag-drop")
 (defn drag-end [_] (swap! state assoc :last-call :drag-end) "on-drag-end")
-(defn fake-hiccup [] [:div {:id "dragging-pet"}
+(defn fake-hiccup [] [:div {:id "drag-bone"}
 																						[:div "a dragging pet"]])
 
 (def dnd (sut/context))
 
 (defn refresh-dnd [] (-> (sut/context)
 																							(sut/add-group :pet)
-																							(sut/add-group :pet-drop)
-																							(sut/drag-from-to :pet :pet-drop)
-																							(sut/on-drag-start :pet drag-start)
-																							(sut/drag-fake-hiccup-fn :pet fake-hiccup)
-																							(sut/on-drop :pet-drop drop!)
-																							(sut/on-drag-end :pet drag-end)
+																							(sut/add-group :pet)
+																							(sut/drag-from-to :treat :pet)
+																							(sut/on-drag-start :treat drag-start)
+																							(sut/drag-fake-hiccup-fn :treat fake-hiccup)
+																							(sut/on-drop :pet drop!)
+																							(sut/on-drag-end :treat drag-end)
+																							(sut/on-drag-over :treat drag-over)
 																							(sut/on-drag-over :pet drag-over)
-																							(sut/on-drag-over :pet-drop drag-over)
+																							(sut/on-drag-out :treat drag-out)
 																							(sut/on-drag-out :pet drag-out)
-																							(sut/on-drag-out :pet-drop drag-out)
-																							(sut/set-drag-class :pet "dragging-pet")))
+																							(sut/set-drag-class :treat "drag-bone")))
 
 (defn test-content []
 		[:div
 			[:div
-				[:h1 "Pets"]
-				[:ol#-pets
-					[:li#-brusly {:style nil :ref (sut/register dnd :pet "brusly")}]
-					[:li#-tails {:ref (sut/register dnd :pet "tails")}]
+				[:h1 "treats"]
+				[:ol#-treats
+					[:li#-bone {:style nil :ref (sut/register dnd :treat "bone")}]
+					[:li#-catnip {:ref (sut/register dnd :treat "catnip")}]
+					[:li#-brusly {:ref (sut/register dnd :pet "brusly")}]
 					[:li#-cheddar {:ref (sut/register dnd :pet "cheddar")}]
-					[:li#-wasabi {:ref (sut/register dnd :pet "wasabi")}]
-					[:li#-dog-drop {:ref (sut/register dnd :pet-drop "dog-drop")}]
-					[:li#-cat-drop {:ref (sut/register dnd :pet-drop "cat-drop")}]
 					]]])
 
 (def dragger (reagent/atom nil))
@@ -92,12 +91,12 @@
 				(it "drags from and to"
 						(sut/add-group blank-dnd :pet)
 						(sut/add-group blank-dnd :pet)
-						(sut/drag-from-to blank-dnd :pet :pet)
-						(should= #{:pet} (get-in @blank-dnd [:groups :pet :targets])))
+						(sut/drag-from-to blank-dnd :treat :pet)
+						(should= #{:pet} (get-in @blank-dnd [:groups :treat :targets])))
 
 				(it "sets drag class"
-						(sut/set-drag-class blank-dnd :pet "pet")
-						(should= "pet" (get-in @blank-dnd [:groups :pet :drag-class])))
+						(sut/set-drag-class blank-dnd :treat "pet")
+						(should= "pet" (get-in @blank-dnd [:groups :treat :drag-class])))
 
 				(context "dnd behaviors"
 						(before
@@ -105,50 +104,47 @@
 								(helper/render [test-content]))
 
 						(it "structure"
-								(should-select "#-brusly")
-								(should-select "#-tails")
-								(should-select "#-cheddar")
-								(should-select "#-wasabi")
-								(should-select "#-dog-drop")
-								(should-select "#-cat-drop"))
+								(should-select "#-bone")
+								(should-select "#-catnip")
+								(should-select "#-brusly"))
 
 						(context "dnd registration"
 								(it "draggables have drag listeners"
 										(let [registrations      (stub/invocations-of :add-listener)
 																registration-types (map #(second %) registrations)]
 												(should-contain "mousedown" registration-types)
-												(should-contain drag-start (get-in @dnd [:groups :pet :listeners :drag-start]))
-												(should-contain drag-over (get-in @dnd [:groups :pet :listeners :drag-over]))
-												(should-contain drag-out (get-in @dnd [:groups :pet :listeners :drag-out]))
-												(should-contain drag-end (get-in @dnd [:groups :pet :listeners :drag-end]))
-												(should= "dragging-pet" (get-in @dnd [:groups :pet :drag-class]))))
+												(should-contain drag-start (get-in @dnd [:groups :treat :listeners :drag-start]))
+												(should-contain drag-over (get-in @dnd [:groups :treat :listeners :drag-over]))
+												(should-contain drag-out (get-in @dnd [:groups :treat :listeners :drag-out]))
+												(should-contain drag-end (get-in @dnd [:groups :treat :listeners :drag-end]))
+												(should= "drag-bone" (get-in @dnd [:groups :treat :drag-class]))))
 
 								(it "droppables have drop listeners"
 										(let [registrations      (stub/invocations-of :add-listener)
 																registration-types (map #(second %) registrations)]
 												(should-contain "mouseenter" registration-types)
 												(should-contain "mouseleave" registration-types)
+												(should-contain drag-out (get-in @dnd [:groups :treat :listeners :drag-out]))
+												(should-contain drag-over (get-in @dnd [:groups :pet :listeners :drag-over]))
 												(should-contain drag-out (get-in @dnd [:groups :pet :listeners :drag-out]))
-												(should-contain drag-over (get-in @dnd [:groups :pet-drop :listeners :drag-over]))
-												(should-contain drag-out (get-in @dnd [:groups :pet-drop :listeners :drag-out]))
-												(should-contain drop! (get-in @dnd [:groups :pet-drop :listeners :drop]))))
+												(should-contain drop! (get-in @dnd [:groups :pet :listeners :drop]))))
 
 								(it "registers draggables & droppables"
 										(let [draggables [:node :draggable-mousedown]
 																droppables [:node :droppable-mouseenter :droppable-mouseleave]]
-												(should-have-invoked :add-listener {:times 8})
-												(should= ["brusly" "tails" "cheddar" "wasabi"] (keys (get-in @dnd [:groups :pet :members])))
-												(should= #{:pet-drop} (get-in @dnd [:groups :pet :targets]))
-												(should= ["dog-drop" "cat-drop"] (keys (get-in @dnd [:groups :pet-drop :members])))
-												(doseq [pet (map :id pets)]
-														(should= draggables (keys (get-in @dnd [:groups :pet :members pet]))))
-												(doseq [pet-drop ["dog-drop" "cat-drop"]]
-														(should= droppables (keys (get-in @dnd [:groups :pet-drop :members pet-drop]))))
+												(should-have-invoked :add-listener {:times 6})
+												(should= treats (keys (get-in @dnd [:groups :treat :members])))
+												(should= #{:pet} (get-in @dnd [:groups :treat :targets]))
+												(should= pets (keys (get-in @dnd [:groups :pet :members])))
+												(doseq [treat treats]
+														(should= draggables (keys (get-in @dnd [:groups :treat :members treat]))))
+												(doseq [pet pets]
+														(should= droppables (keys (get-in @dnd [:groups :pet :members pet]))))
 												))
 								)
 						(context "dnd actions"
-								(before (reset! dragger (get-in @dnd [:groups :pet :members "brusly"]))
-										(reset! dropper (get-in @dnd [:groups :pet-drop :members "dog-drop"])))
+								(before (reset! dragger (get-in @dnd [:groups :treat :members "bone"]))
+										(reset! dropper (get-in @dnd [:groups :pet :members "brusly"])))
 
 								(context "draggable-mouse-down"
 										(it "right mouse-down"
@@ -168,7 +164,7 @@
 														(should-contain "mouseout" after-listeners)
 														(should-contain "mouseup" after-listeners)
 														(should-contain :maybe-drag @dnd)
-														(should= "brusly" (get-in @dnd [:maybe-drag :member]))
+														(should= "bone" (get-in @dnd [:maybe-drag :member]))
 														(should= [0 0] (get-in @dnd [:maybe-drag :start-position]))))
 										)
 
@@ -215,13 +211,13 @@
 
 										(it "not start-drag with false dispatch event"
 												(with-redefs [sut/dispatch-event (stub :dispatch {:return false})]
-														(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {}))
+														(sut/start-drag dnd :treat "bone" @drag-node (clj->js {}))
 														(should-not-contain :active-drag @dnd)
 														(should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
 
 										(it "start drag"
 												(with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-														(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+														(sut/start-drag dnd :treat "bone" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
 														(let [doc-listeners (get-doc-listeners :add-listener)
 																				node-style    (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
 																(should-contain :active-drag @dnd)
@@ -231,19 +227,19 @@
 																(should= "10px" (wjs/o-get node-style "left"))
 																(should= "10px" (wjs/o-get node-style "top"))
 																(should= :drag-start (:last-call @state))
-																(should= "brusly" (:source-key @state))
+																(should= "bone" (:source-key @state))
 																(should-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document))))))))
 
 										#_(it "fakes a hiccup"
 												(with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-														(sut/start-drag dnd :pet "brusly" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+														(sut/start-drag dnd :treat "bone" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
 														(let [dragger-parent (get-in @dnd [:active-drag :drag-node])
 																				dragger (first (wjs/node-children dragger-parent))]
 																(println "(wjs/node-children dragger-parent): " (wjs/node-children dragger-parent))
 																(println "dragger: " dragger)
 																(println "(.-id dragger): " (.-id dragger))
-																(should= "dragging-pet" (.-id dragger))
-																(should= "dragging-pet" (.-class dragger))
+																(should= "drag-bone" (.-id dragger))
+																(should= "drag-bone" (.-class dragger))
 																(should= "a dragging pet" (.-value dragger)))))
 
 										(it "mouse-enter no active drag"
@@ -273,9 +269,9 @@
 												(it "droppable-mouse-enter"
 														(let [mouseenter (:droppable-mouseenter @dropper)]
 																(mouseenter (clj->js {}))
-																(should= [:pet-drop "dog-drop" @drop-node] (get-in @dnd [:active-drag :drop-target]))
+																(should= [:pet "brusly" @drop-node] (get-in @dnd [:active-drag :drop-target]))
 																(should= :drag-over (:last-call @state))
-																(should= "dog-drop" (:target-key @state))))
+																(should= "brusly" (:target-key @state))))
 
 												(it "droppable-mouse-leave"
 														(let [mouseenter (:droppable-mouseenter @dropper)
@@ -297,7 +293,7 @@
 																		(mouseenter (clj->js {}))
 																		(mouseup (clj->js {}))
 																		(should= 2 (- (count (get-doc-listeners :remove-listener)) (count rmv-listeners-before)))
-																		(should= "dog-drop" (:drop @state))
+																		(should= "brusly" (:drop @state))
 																		(should= :drag-end (:last-call @state))
 																		(should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
 												)
@@ -307,8 +303,5 @@
 				)
 		)
 
-;; TODO - MDM: Work within scrolling
 ;; TODO - MDM: Add touch listeners so it works on mobile
 ;; TODO - MDM: custom fake hiccup for dragged node - when drag starts use 'this' as fake-hiccup - look at original dnd for this
-;; TODO - MDM: Same-list, reordering
-;; TODO - MDM: Multiple list, transferring and ordering

@@ -237,7 +237,6 @@
 
 (defn on-drag-start [dnd group listener] (add-group-listener! dnd group :drag-start listener))
 (defn on-drop [dnd group listener] (add-group-listener! dnd group :drop listener))
-(defn on-drag [dnd group listener] (add-group-listener! dnd group :drag listener))
 (defn on-drag-over [dnd group listener] (add-group-listener! dnd group :drag-over listener))
 (defn on-drag-out [dnd group listener] (add-group-listener! dnd group :drag-out listener))
 (defn on-drag-end [dnd group listener] (add-group-listener! dnd group :drag-end listener))
