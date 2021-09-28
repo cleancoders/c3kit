@@ -74,8 +74,8 @@
 								(recur (rest listeners)))
 						true)))
 
-(defn update-drag-node-position [dnd-map js-event]
-		(let [{:keys [drag-node offset]} (:active-drag dnd-map)
+(defn update-drag-node-position [dnd js-event]
+		(let [{:keys [drag-node offset]} (:active-drag @dnd)
 								drag-style (wjs/node-style drag-node)
 								[x y] (wjs/e-coordinates js-event)
 								[offset-x offset-y] offset]
@@ -91,7 +91,7 @@
 (defn- dispatch-drag-over-out [dnd group member node target-group target-member target-node js-event event-type]
 		(let [event (drag-event group member node target-group target-member target-node js-event)]
 				(and (dispatch-event dnd group event-type event)
-						(dispatch-event dnd (:target-group event) event-type event))))
+						(dispatch-event dnd target-group event-type event))))
 
 (defn end-drag [dnd js-event]
 		(let [{:keys [group member node drag-node document drag-listener end-listener drop-target]} (:active-drag @dnd)
@@ -107,19 +107,6 @@
 								(dispatch-event dnd target-group :drop drop-event)))
 				(dispatch-event dnd group :drag-end drag-end-event)
 				(swap! dnd dissoc :active-drag)))
-
-(defn- member->target [group-key [member-key {:keys [node]}]]
-		(let [[x y width height] (wjs/node-bounds node)]
-				(list x (+ x width) y (+ y height) group-key member-key)))
-
-(defn- group->targets [[group-key {:keys [members]}]]
-		(map (partial member->target group-key) members))
-
-(defn- build-targets [state group]
-		(let [target-group-keys (get-in state [:groups group :targets])
-								target-groups     (select-keys (:groups state) target-group-keys)
-								grouped-targets   (map group->targets target-groups)]
-				(apply concat grouped-targets)))
 
 (defn append-dragger [doc drag-node drag-class drag-style]
 		(wjs/node-id= drag-node "_dragndrop-drag-node_")
@@ -159,9 +146,8 @@
 																								}]
 						(append-dragger doc drag-node drag-class drag-style)
 						(add-doc-listeners doc drag-handler end-handler)
-						(-> dnd
-								(swap! assoc :active-drag active-drag)
-								(update-drag-node-position js-event))))
+						(swap! dnd assoc :active-drag active-drag)
+						(update-drag-node-position dnd js-event)))
 		(wjs/nod js-event)
 		)
 
@@ -249,18 +235,15 @@
 						(prn "drag-over success")
 						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
 
-(defn droppable-mouse-enter [dnd target-group target-member target-node js-event]
-		(println "MOUSE ENTER")
-		(when-let [{:keys [group member node]} (:active-drag @dnd)]
-				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-over)
-						(prn "drag-over success")
-						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
-
 (defn droppable-mouse-leave [dnd target-group target-member target-node js-event]
 		(when-let [{:keys [group member node]} (:active-drag @dnd)]
 				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-out)
-						(prn "drag-out success")
 						(swap! dnd update :active-drag dissoc :drop-target))))
+
+(defn droppable-mouse-enter [dnd target-group target-member target-node js-event]
+		(when-let [{:keys [group member node]} (:active-drag @dnd)]
+				(when (dispatch-drag-over-out dnd group member node target-group target-member target-node js-event :drag-over)
+						(swap! dnd assoc-in [:active-drag :drop-target] [target-group target-member target-node]))))
 
 (defn maybe-make-droppable! [{:keys [node] :as data} dnd group member]
 		(if (some #(contains? % group) (map :targets (vals (:groups @dnd))))
@@ -275,7 +258,7 @@
 
 (defn register [dnd group member]
 		(fn [node]
-				(when-not (get-in @dnd [:groups group]) (println "registering to unknown group:") (log/warn "registering to unknown group:" group member))
+				(when-not (get-in @dnd [:groups group]) (log/warn "registering to unknown group:" group member))
 				(if node
 						(let [member-data (-> {:node node}
 																										(maybe-make-draggable! dnd group member)
@@ -336,7 +319,7 @@
 
 (defn drag-fake-hiccup-fn [dnd group-key fake-hiccup-fn]
 		(set! (.-createDragElement (get-group dnd group-key))
-				(fn [node] (println "node: " node) (println "(fake-hiccup-fn node): " (fake-hiccup-fn node)) (fake-hiccup->dom (fake-hiccup-fn node))))
+				(fn [node] (fake-hiccup->dom (fake-hiccup-fn node))))
 		dnd)
 
 

@@ -327,8 +327,7 @@
 
 (defn golf-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)]
-				[:div {:id "dragged-ball" :style (str "width: " width "px;")}
-					[:div {:class "dragging-ball"}]]
+				[:div {:id "dragged-ball" :style (str "width: " width "px;")}]
 				))
 
 (def golf-dnd (-> (dnd/context)
