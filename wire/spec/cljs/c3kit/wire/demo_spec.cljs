@@ -55,13 +55,13 @@
 						(should= "golf-ball" (helper/class-name "#ball-1")))
 
 				(it "balls are draggable"
-						(let [draggables [:node :draggable-mousedown]]
+						(let [draggables [:node :draggable-mousedown :touchable-touchstart]]
 								(should= [:ball-1 :ball-2] (keys (get-in @sut/golf-dnd [:groups :ball :members])))
 								(should= draggables (keys (get-in @sut/golf-dnd [:groups :ball :members :ball-1])))
 								(should= draggables (keys (get-in @sut/golf-dnd [:groups :ball :members :ball-2])))))
 
 				(it "holes are droppable"
-						(let [droppables [:node :droppable-mouseenter :droppable-mouseleave]]
+						(let [droppables [:node :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
 								(should= [:hole-1 :hole-2] (keys (get-in @sut/golf-dnd [:groups :hole :members])))
 								(should= droppables (keys (get-in @sut/golf-dnd [:groups :hole :members :hole-1])))
 								(should= droppables (keys (get-in @sut/golf-dnd [:groups :hole :members :hole-2])))))
@@ -191,13 +191,13 @@
 										(should= "-color-wrapper" (helper/class-name "#-color-wrapper-red")))
 
 								(it "colors are draggable"
-										(let [draggables [:node :draggable-mousedown :droppable-mouseenter :droppable-mouseleave]]
+										(let [draggables [:node :draggable-mousedown :touchable-touchstart :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
 												(should= [:red :orange :yellow :green :blue :indigo :violet :after] (keys (get-in @sut/rainbow-dnd [:groups :color :members])))
 												(should= draggables (keys (get-in @sut/rainbow-dnd [:groups :color :members :red])))
 												(should= draggables (keys (get-in @sut/rainbow-dnd [:groups :color :members :violet])))))
 
 								(it "colors are droppable"
-										(let [droppables [:node :draggable-mousedown :droppable-mouseenter :droppable-mouseleave]]
+										(let [droppables [:node :draggable-mousedown :touchable-touchstart :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
 												(should= [:red :orange :yellow :green :blue :indigo :violet :after] (keys (get-in @sut/rainbow-dnd [:groups :color :members])))
 												(should= droppables (keys (get-in @sut/rainbow-dnd [:groups :color :members :indigo])))
 												(should= droppables (keys (get-in @sut/rainbow-dnd [:groups :color :members :orange])))))
@@ -433,13 +433,13 @@
 										(should= "-truck-wrapper" (helper/class-name "#-truck-wrapper-megalodon")))
 
 								(it "trucks are draggable"
-										(let [draggables [:node :draggable-mousedown :droppable-mouseenter :droppable-mouseleave]]
+										(let [draggables [:node :draggable-mousedown :touchable-touchstart :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
 												(should= #{:megalodon :el-toro-loco :grave-digger :earth-shaker :son-uva-digger :ice-cream-man :hurricane-force :monster-mutt-rottweiler :blaze :dragon :after-trucks} (set (keys (get-in @sut/monster-jam-dnd [:groups :truck :members]))))
 												(for [truck (map :id @sut/monster-trucks)]
 														(should= draggables (keys (get-in @sut/monster-jam-dnd [:groups :truck :members truck]))))))
 
 								(it "trucks are droppable"
-										(let [droppables [:node :draggable-mousedown :droppable-mouseenter :droppable-mouseleave]]
+										(let [droppables [:node :draggable-mousedown :touchable-touchstart :droppable-mouseenter :droppable-mouseleave :droppable-touchend]]
 												(should= #{:megalodon :el-toro-loco :grave-digger :earth-shaker :son-uva-digger :ice-cream-man :hurricane-force :monster-mutt-rottweiler :blaze :dragon :after-trucks} (set (keys (get-in @sut/monster-jam-dnd [:groups :truck :members]))))
 												(should= #{:team} (set (keys (get-in @sut/monster-jam-dnd [:groups :truck-drop :members]))))
 												(for [truck (map :id @sut/monster-trucks)]

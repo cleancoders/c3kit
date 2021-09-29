@@ -1,4 +1,4 @@
-(ns c3kit.wire.dragndrop-spec
+(ns c3kit.wire.dragndrop-touch-spec
   (:require-macros [speclj.core :refer [describe context xit it should-not-be-nil should-be-nil should= should-not
                                         should-not= should-have-invoked after before with-stubs with around
                                         should-contain should-not-contain should should-not-have-invoked stub]]
@@ -65,7 +65,7 @@
 
 (defn get-listeners [kind] (map #(second %) (stub/invocations-of kind)))
 
-(describe "Drag and Drop"
+(describe "MOBILE TOUCH Drag and Drop"
   (with-stubs)
   (helper/with-root-dom)
   (before (reset! blank-dnd {}))
@@ -146,219 +146,61 @@
         (before (reset! dragger (get-in @dnd [:groups :treat :members "bone"]))
           (reset! dropper (get-in @dnd [:groups :pet :members "brusly"])))
 
-        (context "mouse actions"
-          (context "draggable-mouse-down"
-            (it "right mouse-down"
-              (let [cnt-add-listeners (count (stub/invocations-of :add-listener))
-                    mousedown         (:draggable-mousedown @dragger)]
-                (mousedown (clj->js {:button 1}))
-                (should= 0 (- (count (stub/invocations-of :add-listener)) cnt-add-listeners))
-                (should-not-contain :maybe-drag @dnd)))
-
-            (it "left mouse-down"
-              (let [before-listeners (get-listeners :add-listener)
-                    mousedown        (:draggable-mousedown @dragger)
-                    _                (mousedown (clj->js {:button 0 :clientX 0 :clientY 0}))
-                    after-listeners  (get-listeners :add-listener)]
-                (should= 3 (- (count after-listeners) (count before-listeners)))
-                (should-contain "mousemove" after-listeners)
-                (should-contain "mouseout" after-listeners)
-                (should-contain "mouseup" after-listeners)
-                (should-contain :maybe-drag @dnd)
-                (should= "bone" (get-in @dnd [:maybe-drag :member]))
-                (should= [0 0] (get-in @dnd [:maybe-drag :start-position]))))
-            )
-
-          (context "dragging"
-            (before
-              (let [mousedown (:draggable-mousedown @dragger)]
-                (mousedown (clj->js {:button 0 :clientX 0 :clientY 0}))))
-
-            (context "maybe drag"
-              (it "mouse up with no valid movement"
-                (let [remove-listeners-before (get-listeners :remove-listener)
-                      mouseup                 (get-in @dnd [:maybe-drag :mouse-up-listener])
-                      _                       (mouseup {})
-                      remove-listeners-after  (get-listeners :remove-listener)]
-                  (should-not-contain :maybe-drag @dnd)
-                  (should= 3 (- (count remove-listeners-after) (count remove-listeners-before)))
-                  (should-contain "mousemove" remove-listeners-after)
-                  (should-contain "mouseout" remove-listeners-after)
-                  (should-contain "mouseup" remove-listeners-after)))
-
-              (it "movement below threshold"
-                (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:clientX 2 :clientY 2}))
-                    (should-not-have-invoked :start-drag)
-                    (should-contain :maybe-drag @dnd))))
-
-              (it "valid movement - above threshold"
-                (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:clientX 10 :clientY 10}))
-                    (should-have-invoked :start-drag)
-                    (should-have-invoked :nod)
-                    (should-not-contain :maybe-drag @dnd))))
-
-              (it "valid movement - mouseout"
-                (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:type "mouseout" :target @drag-node}))
-                    (should-have-invoked :nod)
-                    (should-have-invoked :start-drag)
-                    (should-not-contain :maybe-drag @dnd))))
-              )
-
-            (it "not start-drag with false dispatch event"
-              (with-redefs [sut/dispatch-event (stub :dispatch {:return false})]
-                (sut/start-drag dnd :treat "bone" @drag-node (clj->js {}))
-                (should-not-contain :active-drag @dnd)
-                (should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
-
-            (it "start drag"
-              (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-                (sut/start-drag dnd :treat "bone" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
-                (let [doc-listeners (get-doc-listeners :add-listener)
-                      node-style    (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
-                  (should-contain :active-drag @dnd)
-                  (should= 5 (count doc-listeners))
-                  (should-contain "mousemove" doc-listeners)
-                  (should= [-10 -10] (get-in @dnd [:active-drag :offset]))
-                  (should= "10px" (wjs/o-get node-style "left"))
-                  (should= "10px" (wjs/o-get node-style "top"))
-                  (should= :drag-start (:last-call @state))
-                  (should= "bone" (:source-key @state))
-                  (should-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document))))))))
-
-            #_(it "fakes a hiccup"
-                (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-                  (sut/start-drag dnd :treat "bone" @drag-node (clj->js {:target @drag-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
-                  (let [dragger-parent (get-in @dnd [:active-drag :drag-node])
-                        dragger        (first (wjs/node-children dragger-parent))]
-                    (println "(wjs/node-children dragger-parent): " (wjs/node-children dragger-parent))
-                    (println "dragger: " dragger)
-                    (println "(.-id dragger): " (.-id dragger))
-                    (should= "drag-bone" (.-id dragger))
-                    (should= "drag-bone" (.-class dragger))
-                    (should= "a dragging pet" (.-value dragger)))))
-
-            (it "mouse-enter no active drag"
-              (let [mouseenter (:droppable-mouseenter @dropper)]
-                (mouseenter (clj->js {}))
-                (should= nil (get-in @dnd [:active-drag :drop-target]))
-                ))
-
-            (it "mouse-leave no active drag"
-              (let [mouseleave (:droppable-mouseleave @dropper)]
-                (should= nil (mouseleave (clj->js {})))))
-
-            (context "active-drag"
-              (before (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-                        (let [mousemove (get-in @dnd [:maybe-drag :move-listener])]
-                          (mousemove (clj->js {:type "mouseout" :target @drag-node :scrollX 0 :scrollY 0}))
-                          )))
-
-              (it "handles the drag"
-                (let [drag-handler (get-in @dnd [:active-drag :drag-listener])]
-                  (drag-handler (clj->js {:target @drag-node :clientX 10 :clientY 15}))
-                  (let [node-style (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
-                    (should= [-10 -10] (get-in @dnd [:active-drag :offset]))
-                    (should= "20px" (wjs/o-get node-style "left"))
-                    (should= "25px" (wjs/o-get node-style "top")))))
-
-              (it "droppable-mouse-enter"
-                (let [mouseenter (:droppable-mouseenter @dropper)]
-                  (mouseenter (clj->js {}))
-                  (should= [:pet "brusly" @drop-node] (get-in @dnd [:active-drag :drop-target]))
-                  (should= :drag-over (:last-call @state))
-                  (should= "brusly" (:target-key @state))))
-
-              (it "droppable-mouse-leave"
-                (let [mouseenter (:droppable-mouseenter @dropper)
-                      mouseleave (:droppable-mouseleave @dropper)]
-                  (mouseenter (clj->js {}))
-                  (mouseleave (clj->js {}))
-                  (should= :drag-out (:last-call @state))
-                  (should= nil (:target-key @state))))
-
-              (it "end-drag - no target"
-                (let [mouseup (get-in @dnd [:active-drag :end-listener])]
-                  (mouseup (clj->js {}))
-                  (should= nil (:drop! @state))))
-
-              (it "end-drag - with target"
-                (let [mouseenter           (:droppable-mouseenter @dropper)
-                      mouseup              (get-in @dnd [:active-drag :end-listener])
-                      rmv-listeners-before (get-doc-listeners :remove-listener)]
-                  (mouseenter (clj->js {}))
-                  (mouseup (clj->js {}))
-                  (should= 4 (- (count (get-doc-listeners :remove-listener)) (count rmv-listeners-before)))
-                  (should= "brusly" (:drop @state))
-                  (should= :drag-end (:last-call @state))
-                  (should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
-              )
-            )
-          )
-
-        #_(context "mobile touch actions"
+        (context "mobile touch actions"
           (context "touchstart"
             (it "more than single touch"
               (let [cnt-add-listeners (count (stub/invocations-of :add-listener))
                     touchstart       (:touchable-touchstart @dragger)]
-                (touchstart (clj->js [{:clientX 0 :clientY 0} {:clientX 10 :clientY 10}]))
+                (touchstart (clj->js {:touches [{:clientX 0 :clientY 0} {:clientX 10 :clientY 10}]}))
                 (should= 0 (- (count (stub/invocations-of :add-listener)) cnt-add-listeners))
                 (should-not-contain :maybe-drag @dnd)))
 
             (it "single touch"
               (let [before-listeners (get-listeners :add-listener)
                     touchstart       (:touchable-touchstart @dragger)
-                    _                (touchstart (clj->js [{:clientX 0 :clientY 0}]))
+                    _                (touchstart (clj->js {:touches [{:clientX 0 :clientY 0}]}))
                     after-listeners  (get-listeners :add-listener)]
-                (should= 1 (- (count after-listeners) (count before-listeners)))
+                (should= 2 (- (count after-listeners) (count before-listeners)))
                 (should-contain "touchmove" after-listeners)
-                (should-contain :maybe-drag @dnd)
+                (should-contain :maybe-drag @dnd) 
                 (should= "bone" (get-in @dnd [:maybe-drag :member]))
                 (should= [0 0] (get-in @dnd [:maybe-drag :start-position]))))
             )
-          #_(context "dragging"
+          (context "dragging"
             (before
-              (let [mousedown (:draggable-mousedown @dragger)]
-                (mousedown (clj->js {:button 0 :clientX 0 :clientY 0}))))
+              (let [touchstart (:touchable-touchstart @dragger)]
+                (touchstart (clj->js {:touches [{:clientX 0 :clientY 0}]}))))
 
             (context "maybe drag"
-              (it "mouse up with no valid movement"
+              (it "touchend with no valid movement"
                 (let [remove-listeners-before (get-listeners :remove-listener)
-                      mouseup                 (get-in @dnd [:maybe-drag :mouse-up-listener])
-                      _                       (mouseup {})
+                      touchend                 (get-in @dnd [:maybe-drag :touchend-listener])
+                      _                       (touchend {})
                       remove-listeners-after  (get-listeners :remove-listener)]
                   (should-not-contain :maybe-drag @dnd)
-                  (should= 3 (- (count remove-listeners-after) (count remove-listeners-before)))
-                  (should-contain "mousemove" remove-listeners-after)
-                  (should-contain "mouseout" remove-listeners-after)
-                  (should-contain "mouseup" remove-listeners-after)))
+                  (should= 2 (- (count remove-listeners-after) (count remove-listeners-before)))
+                  (should-contain "touchend" remove-listeners-after)))
 
               (it "movement below threshold"
                 (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:clientX 2 :clientY 2}))
+                  (let [touchmove-handler (get-in @dnd [:maybe-drag :touchmove-listener])]
+                    (touchmove-handler (clj->js {:touches (clj->js [{:clientX 2 :clientY 2}])}))
+                    (should-not-have-invoked :start-drag)
+                    (should-contain :maybe-drag @dnd))))
+
+              (it "invalid move - added touch"
+                (with-redefs [sut/start-drag (stub :start-drag)]
+                  (let [touchmove-handler (get-in @dnd [:maybe-drag :touchmove-listener])]
+                    (touchmove-handler (clj->js {:touches (clj->js [{:clientX 10 :clientY 10} {:clientX 11 :clientY 10}])}))
                     (should-not-have-invoked :start-drag)
                     (should-contain :maybe-drag @dnd))))
 
               (it "valid movement - above threshold"
                 (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:clientX 10 :clientY 10}))
+                  (let [touchmove-handler (get-in @dnd [:maybe-drag :touchmove-listener])]
+                    (touchmove-handler (clj->js {:touches (clj->js [{:clientX 0 :clientY 0} {:clientX 1 :clientY 10} {:clientX 2 :clientY 10} {:clientX 3 :clientY 10} {:clientX 4 :clientY 10}])}))
                     (should-have-invoked :start-drag)
                     (should-have-invoked :nod)
-                    (should-not-contain :maybe-drag @dnd))))
-
-              (it "valid movement - mouseout"
-                (with-redefs [sut/start-drag (stub :start-drag)]
-                  (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
-                    (mousemove-handler (clj->js {:type "mouseout" :target @drag-node}))
-                    (should-have-invoked :nod)
-                    (should-have-invoked :start-drag)
                     (should-not-contain :maybe-drag @dnd))))
               )
 
@@ -366,7 +208,7 @@
               (with-redefs [sut/dispatch-event (stub :dispatch {:return false})]
                 (sut/start-drag dnd :treat "bone" @drag-node (clj->js {}))
                 (should-not-contain :active-drag @dnd)
-                (should-not-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
+                (should-not-contain "_dragndrop-drag-node_" (map #(helper/id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
 
             (it "start drag"
               (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
@@ -375,13 +217,13 @@
                       node-style    (wjs/node-style (get-in @dnd [:active-drag :drag-node]))]
                   (should-contain :active-drag @dnd)
                   (should= 5 (count doc-listeners))
-                  (should-contain "mousemove" doc-listeners)
+                  (should-contain "touchmove" doc-listeners)
                   (should= [-10 -10] (get-in @dnd [:active-drag :offset]))
                   (should= "10px" (wjs/o-get node-style "left"))
                   (should= "10px" (wjs/o-get node-style "top"))
                   (should= :drag-start (:last-call @state))
                   (should= "bone" (:source-key @state))
-                  (should-contain "_dragndrop-drag-node_" (map #(.-id %) (wjs/node-children (wjs/doc-body (wjs/document))))))))
+                  (should-contain "_dragndrop-drag-node_" (map #(helper/id %) (wjs/node-children (wjs/doc-body (wjs/document))))))))
 
             #_(it "fakes a hiccup"
                 (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
@@ -395,17 +237,17 @@
                     (should= "drag-bone" (.-class dragger))
                     (should= "a dragging pet" (.-value dragger)))))
 
-            (it "mouse-enter no active drag"
-              (let [mouseenter (:droppable-mouseenter @dropper)]
-                (mouseenter (clj->js {}))
+            #_(it "touchmove no active drag"
+              (let [touchmove (:touchable-move @dragger)]
+                (touchmove (clj->js {}))
                 (should= nil (get-in @dnd [:active-drag :drop-target]))
                 ))
 
-            (it "mouse-leave no active drag"
-              (let [mouseleave (:droppable-mouseleave @dropper)]
-                (should= nil (mouseleave (clj->js {})))))
+            ;(it "mouse-leave no active drag"
+            ;  (let [mouseleave (:droppable-mouseleave @dropper)]
+            ;    (should= nil (mouseleave (clj->js {})))))
 
-            (context "active-drag"
+            #_(context "active-drag"
               (before (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
                         (let [mousemove (get-in @dnd [:maybe-drag :move-listener])]
                           (mousemove (clj->js {:type "mouseout" :target @drag-node :scrollX 0 :scrollY 0}))
