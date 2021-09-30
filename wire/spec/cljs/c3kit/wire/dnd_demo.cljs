@@ -76,7 +76,7 @@
 
 (defn update-order [{:keys [source-key target-key]} state-atom items-atom]
 		(let [source-element (:dragged-element @state-atom)
-								target-element (get-element-by-id target-key @items-atom)
+								target-element (get-element-by-id target-key @monster-trucks)
 								after-key      (keyword (str "after-" (apply str (rest (str (:owner source-element))))))
 								]
 				(cond (or (= :after target-key) (= after-key target-key)) (move-element-to-last source-key source-element state-atom items-atom)
@@ -117,9 +117,15 @@
 
 (defn truck-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)
-								truck (get @monster-trucks (:dragging @monster-jam-state))]
-				[:div {:id "dragged-truck" :class "dragging-truck" :style (str "width: " width "px;") :background-color "white" :text (:name truck)}
-					[:div {:class "dragging-truck" :style {:background-color "white" :text (:name truck)}}]]
+								truck (:dragged-element @monster-jam-state)]
+			(println "truck: " truck)
+			(println "(:name truck): " (:name truck))
+			#_[:div.-color-wrapper {:id "dragged-color"}
+				[:<>
+					[:span.color {:class "-color" :style {:background-color (:color color)}}
+						(:name color)]]]
+			[:div.-truck-wrapper {:id "dragged-truck" :style {:width width}}
+				(:name truck)]
 				))
 
 (def monster-jam-dnd (-> (dnd/context)
@@ -246,29 +252,23 @@
 
 (defn color-drag-fake-hiccup [node]
 		(let [color (:dragged-element @rainbow-state)]
-				[:div {:id "dragged-color" :class "dragging-color" :style {:background-color "white" :text (:color color)}}
-					[:div {:class "dragging-color" :style {:background-color "white" :text (:color color)}}]]
+				[:div.-color-wrapper {:id "dragged-color"}
+						[:<>
+							[:span.color {:class "-color" :style {:background-color (:color color)}}
+								(:name color)]]]
 				))
 
 (def rainbow-dnd (-> (dnd/context)
 																			(dnd/add-group :color)
-																			;(dnd/add-group :color-drop)
 																			(dnd/drag-from-to :color :color)
-																			;(dnd/drag-from-to :color :color-drop)
 																			(dnd/on-drag-start :color color-drag-started)
 																			(dnd/drag-fake-hiccup-fn :color color-drag-fake-hiccup)
-																			;(dnd/on-drag :color move-ball)
 																			(dnd/on-drop :color color-drop)
-																			;(dnd/on-drop :color-drop color-drop)
 																			(dnd/on-drag-end :color color-drag-end)
 																			(dnd/on-drag-over :color #(println "color drag-over"))
 																			(dnd/on-drag-over :color drag-over-color)
-																			;(dnd/on-drag-over :color-drop #(println "color-drop drag-over"))
-																			;(dnd/on-drag-over :color-drop drag-over-color)
 																			(dnd/on-drag-out :color #(println "color drag-out"))
 																			(dnd/on-drag-out :color drag-out-color)
-																			;(dnd/on-drag-out :color-drop #(println "color-drop drag-out"))
-																			;(dnd/on-drag-out :color-drop drag-out-color)
 																			(dnd/set-drag-class :color "dragging-color")))
 
 (defn color-content [color]
@@ -327,7 +327,9 @@
 
 (defn golf-drag-fake-hiccup [node]
 		(let [width (.-clientWidth node)]
-				[:div {:id "dragged-ball" :style (str "width: " width "px;")}]
+				(println "HICCUP!!!!")
+			(println "(.-id node): " (.-id node))
+				[:div {:id "dragging-ball" :style {:width width :background-color "blueviolet"}}]
 				))
 
 (def golf-dnd (-> (dnd/context)

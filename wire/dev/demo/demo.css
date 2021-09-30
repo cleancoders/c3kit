@@ -38,7 +38,7 @@ h2 {
     filter: drop-shadow(5px 5px 5px #00000080);
     cursor: grabbing !important;
     overflow: hidden;
-    background-color: blueviolet;
+    /*background-color: blueviolet;*/
 }
 
 .grab {
@@ -107,13 +107,10 @@ li.color {
 
 .dragging-color {
     cursor: grabbing !important;
-    padding: 0;
     width: 400px;
     height: 50px;
-    list-style-type: none;
     text-align: center;
     border: 2px solid lightgrey;
-    background-color: white;
     transform: rotate(2deg);
 }
 
@@ -127,18 +124,6 @@ li.color {
     padding-right: 25px;
 }
 
-.dragging-truck {
-    cursor: grabbing !important;
-    padding: 0;
-    width: 300px;
-    height: 50px;
-    list-style-type: none;
-    text-align: center;
-    border: 1px solid lightgrey;
-    background-color: coral;
-    transform: rotate(2deg);
-}
-
 li.truck {
     padding: 0;
     height: 50px;
@@ -147,4 +132,14 @@ li.truck {
     list-style-type: none;
     text-align: center;
     border: 1px solid darkslateblue;
+}
+
+.dragging-truck {
+    cursor: grabbing !important;
+    width: 400px;
+    height: 50px;
+    text-align: center;
+    border: 2px solid lightgrey;
+    transform: rotate(2deg);
+    background-color: coral;
 }
