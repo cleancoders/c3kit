@@ -118,9 +118,10 @@
 (defn node-style [node] (.-style node))
 (defn node-add-class [node class] (.add (.-classList node) class))
 (defn node-remove-class [node class] (.remove (.-classList node) class))
+(defn node-classes [node] (.-className node))
 (defn node-bounds [node]
   (let [rect (.getBoundingClientRect node)]
-    [(.-x rect) (.-y rect) (.-width rect) (.-height rect)]))
+    [(or (.-x rect) (.-left rect)) (or (.-y rect) (.-top rect)) (.-width rect) (.-height rect)]))
 
 (defn uri-encode [& stuff] (js/encodeURIComponent (apply str stuff)))
 (defn post-message [window message target-domain] (.postMessage window (clj->js message) target-domain))
