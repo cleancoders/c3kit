@@ -5,6 +5,7 @@
 			[c3kit.apron.corec :as ccc]
 			[c3kit.apron.log :as log]
 			[c3kit.wire.ajax :as ajax]
+			[c3kit.wire.js :as wjs]
 			[c3kit.wire.websocket :as ws]
 			[cljs.pprint :as pp]
 			[cljsjs.react.dom.test-utils]                            ;; Brings in js/ReactTestUtils
@@ -13,7 +14,7 @@
 			[reagent.dom :as dom]
 			[speclj.core]
 			[speclj.stub :as stub]
-			[c3kit.wire.js :as wjs]))
+			))
 
 (log/warn!)
 
@@ -84,6 +85,35 @@
 			(if-let [node (select root selector)]
 					node
 					(throw (ex-info (str action " - can't find child node: " selector) {:action action :root root :selector selector})))))
+
+; https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode
+(def keypresses
+	{wjs/ESC   (clj->js {:keyCode 27 :key "Escape"})
+		wjs/ENTER (clj->js {:keyCode 13 :key "Enter"})
+		wjs/LEFT  (clj->js {:keyCode 37 :key "ArrowLeft"})
+		wjs/UP    (clj->js {:keyCode 38 :key "ArrowUp"})
+		wjs/RIGHT (clj->js {:keyCode 39 :key "ArrowRight"})
+		wjs/DOWN  (clj->js {:keyCode 40 :key "ArrowDown"})})
+
+(defn key-down
+	([thing key-code]
+		((.-keyDown simulator) (resolve-node :key-down thing) (get keypresses key-code)))
+	([root selector key-code]
+		(key-down (resolve-node :key-down root selector) key-code)))
+
+(defn key-down!
+	([thing key-code] (key-down thing key-code) (flush))
+	([root selector key-code] (key-down root selector key-code) (flush)))
+
+(defn key-up
+	([thing key]
+		((.-keyUp simulator) (resolve-node :key-up thing) (get keypresses key)))
+	([root selector key]
+		(key-up (resolve-node :key-up root selector) key)))
+
+(defn key-up!
+	([thing key] (key-up thing key) (flush))
+	([root selector key] (key-up root selector key) (flush)))
 
 (defn touch-end
 		([thing]
