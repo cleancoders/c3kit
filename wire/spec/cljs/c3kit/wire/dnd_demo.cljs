@@ -76,7 +76,7 @@
 
 (defn update-order [{:keys [source-key target-key]} state-atom items-atom]
 		(let [source-element (:dragged-element @state-atom)
-								target-element (get-element-by-id target-key @monster-trucks)
+								target-element (get-element-by-id target-key @items-atom)
 								after-key      (keyword (str "after-" (apply str (rest (str (:owner source-element))))))
 								]
 				(cond (or (= :after target-key) (= after-key target-key)) (move-element-to-last source-key source-element state-atom items-atom)
