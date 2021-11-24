@@ -6,7 +6,7 @@
     [c3kit.wire.api :as api]
     [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
-    [cljs-http.client :as http]                             ;; TODO - MDM: switch to httpkit
+    [cljs-http.client :as http]
     [cljs.core.async :as async]
     [reagent.core :as reagent]
     ))
@@ -17,8 +17,10 @@
   (flash/add! api/server-down-flash)
   (cc/timeout 3000 #(do-ajax-request ajax-call)))
 
-(defn handle-unexpected-status [response ajax-call]
-  (log/error "Unexpected AJAX response: " response ajax-call))
+(defn handle-http-error [response ajax-call]
+  (if-let [handler (:on-http-error (:options ajax-call))]
+    (handler response)
+    (log/error "Unexpected AJAX response: " response ajax-call)))
 
 (def active-ajax-requests (reagent/atom 0))
 (defn activity? [] (not= 0 @active-ajax-requests))
@@ -30,16 +32,18 @@
 (defn triage-response [response ajax-call]
   (cond (server-down? response) (handle-server-down ajax-call)
         (= 200 (:status response)) (api/handle-api-response (:body response) ajax-call)
-        :else (handle-unexpected-status response ajax-call)))
+        :else (handle-http-error response ajax-call)))
 
-(defn request-map [{:keys [options params] :as ajax-call}]
+(defn request-map [{:keys [options params method] :as ajax-call}]
   (let [request {:headers {"X-CSRF-Token" (:anti-forgery-token @api/config)}}]
     (if (:form-data? options)
       (let [form-data (js/FormData.)]
         (doseq [[k v] params]
           (.append form-data (name k) v))
         (assoc request :body form-data))
-      (assoc request :query-params params))))               ;; TODO - MDM: Should be :form-params for post request
+      (if (= "GET" method)
+        (assoc request :query-params params)
+        (assoc request :form-params params)))))
 
 (defn- do-ajax-request [{:keys [method method-fn url params] :as ajax-call}]
   (log/debug "<" method url params)
@@ -67,8 +71,8 @@
 ;; to expect based on what it's asking for.
 ;;
 ;; Options:    - extensible
-;;  :after-all - a no-arg fn that is always called at the end of the entire ajax process.
-;;  :no-redirect - when truthy, redirect is ignored
+;;  *** - see c3kit.wire.api for list of general API options
+;;  :on-http-error  - (fn [response]...) invoked when the HTTP status code is unexpected
 
 (defn get! [url params handler & opt-args]
   (do-ajax-request (build-ajax-call "GET" http/get url params handler opt-args)))

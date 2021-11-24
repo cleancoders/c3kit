@@ -1,7 +1,8 @@
 (ns c3kit.wire.ajax-spec
   (:require-macros [speclj.core :refer [describe context it should-not-be-nil should-be-nil should= should-not
                                         should-not= should-have-invoked after before with-stubs with around
-                                        should-contain should-not-contain stub should-not-have-invoked should-have-invoked]])
+                                        should-contain should-not-contain stub should-not-have-invoked should-have-invoked]]
+                   [c3kit.apron.log :refer [capture-logs]])
   (:require
     [c3kit.apron.log :as log]
     [c3kit.wire.ajax :as sut]
@@ -10,7 +11,7 @@
     [c3kit.wire.flash :as flash]
     [c3kit.wire.spec-helper :as helper]
     [speclj.core]
-    ))
+    [c3kit.apron.corec :as ccc]))
 
 (def handler :undefined)
 
@@ -42,7 +43,7 @@
     (around [it]
       (with-redefs [api/handle-api-response (stub :handle-api-response)
                     sut/handle-server-down (stub :handle-server-down)
-                    sut/handle-unexpected-status (stub :handle-unknown)]
+                    sut/handle-http-error (stub :handle-unknown)]
         (it)))
 
     (it "success"
@@ -75,7 +76,7 @@
 
     (it "timeout"
       (sut/handle-server-down {})
-      (should-have-invoked :timeout)) ; presumably to re-invoke the api call
+      (should-have-invoked :timeout))                       ; presumably to re-invoke the api call
     )
 
   (context "requests"
@@ -86,13 +87,24 @@
       (sut/save-destination "/foo")
       (should-have-invoked :ajax/post! {:with ["/api/v1/save-destination" {:destination "/foo"} :*]}))
 
+    (it "params key"
+      (let [get  (sut/request-map (sut/build-ajax-call "GET" ccc/noop "/some/url" {:foo "bar"} ccc/noop []))
+            post (sut/request-map (sut/build-ajax-call "POST" ccc/noop "/some/url" {:foo "bar"} ccc/noop []))]
+        (should= {:foo "bar"} (:query-params get))
+        (should-not-contain :form-params get)
+        (should= {:foo "bar"} (:form-params post))
+        (should-not-contain :query-params post)))
+
     )
 
   (context "options"
 
-    #_(it "on-unexpected-status"
-      ())
-
+    (it "on-http-error"
+      (let [ajax-call (sut/build-ajax-call "POST" ccc/noop "/some/url" {} ccc/noop
+                                           [:on-http-error (stub :unexpected-response-handler)])
+            response  {:status 413 :body "foo"}]
+        (capture-logs
+          (sut/triage-response response ajax-call))
+        (should-have-invoked :unexpected-response-handler {:with [response]})))
     )
-
   )
