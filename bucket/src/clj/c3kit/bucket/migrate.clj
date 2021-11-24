@@ -26,9 +26,9 @@
     (log/warn "\tadd: SKIPPING " new)
     (do
       (log/info (str "\tadding " new))
-      (let [kind (keyword (namespace new))
+      (let [kind      (keyword (namespace new))
             attr-name (keyword (name new))
-            attr (db/build-attribute kind (concat [attr-name type] spec))]
+            attr      (db/build-attribute kind (concat [attr-name type] spec))]
         (db/transact! [attr])))))
 
 (defn rename [old new]
@@ -38,8 +38,8 @@
     (log/warn "\trename FAILED: MISSING " old)))
 
 (defn entity-values [e-id attr]
-  (let [e (api/entity (db/db) e-id)
-        v (get e attr)
+  (let [e  (api/entity (db/db) e-id)
+        v  (get e attr)
         vs (if (set? v) v [v])]
     (map #(or (:db/id %) %) vs)))
 
@@ -97,14 +97,25 @@
       (log/error migration "FAILED")
       (throw e))))
 
+(def db-partitions
+  '[:find ?ident :where [:db.part/db :db.install/partition ?p]
+    [?p :db/ident ?ident]])
+
+(defn init-partition []
+  (let [partition-name (db/partition-name)]
+    (when-not (contains? (db/q db-partitions) [partition-name])
+     (log/info "\tadding partition:" partition-name)
+     (db/transact! (db/partition-schema)))))
+
 (defn init []
   (app/start! [db/service])
+  (init-partition)
   (init-migration-list))
 
 (defn- db-entity-schema [schema]
   (for [[key spec] (seq (dissoc schema :kind :id :*))]
     (let [type (:type spec)
-          db (:db spec)
+          db   (:db spec)
           [type db] (if (sequential? type) [(first type) (conj db :many)] [type db])]
       (concat [key type] db))))
 
@@ -142,11 +153,11 @@
           (migrate! (:migration-ns-prefix config) migration)))
 
       (let [full-schema-var (:full-schema config)
-            _ (when-not full-schema-var (throw (Exception. ":full-schema missing from datomic.edn")))
-            full-schema @(util/resolve-var full-schema-var)
-            schema (mapcat ->db-schema full-schema)]
+            _               (when-not full-schema-var (throw (Exception. ":full-schema missing from datomic.edn")))
+            full-schema     @(util/resolve-var full-schema-var)
+            schema          (mapcat ->db-schema full-schema)]
         (log/info "Applying full schema. " (count schema) " attributes")
-        @(db/transact! (concat (db/partition-schema) schema)))
+        @(db/transact! schema))
       (log/info (str "Migration complete. " (count (db/current-schema)) " attributes found in schema.")))
 
     (System/exit 0)

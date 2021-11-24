@@ -42,7 +42,7 @@
     (around [it]
       (with-redefs [api/handle-api-response (stub :handle-api-response)
                     sut/handle-server-down (stub :handle-server-down)
-                    sut/handle-unknown (stub :handle-unknown)]
+                    sut/handle-unexpected-status (stub :handle-unknown)]
         (it)))
 
     (it "success"
@@ -85,6 +85,13 @@
     (it "save-destination"
       (sut/save-destination "/foo")
       (should-have-invoked :ajax/post! {:with ["/api/v1/save-destination" {:destination "/foo"} :*]}))
+
+    )
+
+  (context "options"
+
+    #_(it "on-unexpected-status"
+      ())
 
     )
 

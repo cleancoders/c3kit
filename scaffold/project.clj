@@ -1,4 +1,4 @@
-(defproject com.cleancoders.c3kit/scaffold "1.0.2"
+(defproject com.cleancoders.c3kit/scaffold "1.0.3"
   :description "Clean Coders Clojure (C3) Kit - Scaffold: Build tools."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}

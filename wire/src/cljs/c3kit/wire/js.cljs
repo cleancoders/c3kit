@@ -4,15 +4,17 @@
     [goog.object :as gobject]
     [c3kit.apron.log :as log]))
 
+(defn e-key-code [e] (-> e .-keyCode))
+
 ; Key Codes
 (def BACKSPACE 8)
 (def TAB 9)
-(defn TAB? [e] (= (.-keyCode e) TAB))
+(defn TAB? [e] (= (e-key-code e) TAB))
 (def ENTER 13)
-(defn ENTER? [e] (= (.-keyCode e) ENTER))
+(defn ENTER? [e] (= (e-key-code e) ENTER))
 (def SHIFT 16)
 (def ESC 27)
-(defn ESC? [e] (= (.-keyCode e) ESC))
+(defn ESC? [e] (= (e-key-code e) ESC))
 (def SPACE 32)
 (def LEFT 37)
 (def UP 38)

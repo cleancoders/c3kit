@@ -94,7 +94,7 @@
     (fn []
       [:div.contextual-menu-anchor
        [:button#-disconnected-button.disconnected.naked {:on-click #(reset! open? true)}
-        [:span.fas.fa-exclamation-triangle.error.small-margin-left]]
+        [:span.fas.fa-exclamation-triangle.animation.error.small-margin-left]]
        (when @open?
          [:div#-disconnected-menu-overlay.contextual-menu {:on-click #(reset! open? false)}
           [:div#-disconnected-menu.card
