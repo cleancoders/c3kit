@@ -89,6 +89,7 @@
 ; https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode
 (def keypresses
 	{wjs/ESC   (clj->js {:keyCode 27 :key "Escape"})
+		wjs/TAB   (clj->js {:keyCode 9, :key "Tab"})
 		wjs/ENTER (clj->js {:keyCode 13 :key "Enter"})
 		wjs/LEFT  (clj->js {:keyCode 37 :key "ArrowLeft"})
 		wjs/UP    (clj->js {:keyCode 38 :key "ArrowUp"})
@@ -97,7 +98,9 @@
 
 (defn key-down
 	([thing key-code]
-		((.-keyDown simulator) (resolve-node :key-down thing) (get keypresses key-code)))
+		((.-keyDown simulator)
+			(resolve-node :key-down thing)
+			(get keypresses key-code (clj->js {:keyCode key-code :key (str key-code)}))))
 	([root selector key-code]
 		(key-down (resolve-node :key-down root selector) key-code)))
 
