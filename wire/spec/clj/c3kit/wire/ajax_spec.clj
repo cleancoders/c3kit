@@ -16,8 +16,8 @@
   (context "middleware"
 
     (it "transfers flash messages"
-      (let [handler (fn [r] (sut/ok :foo "Yipee!"))
-            wrapped (sut/wrap-transfer-flash-to-api handler)
+      (let [handler  (fn [r] (sut/ok :foo "Yipee!"))
+            wrapped  (sut/wrap-transfer-flash-to-api handler)
             response (wrapped {})]
         (should= nil (-> response :flash :messages))
         (should= "Yipee!" (-> response :body :flash first flashc/text))
@@ -25,8 +25,8 @@
 
     (it "adds version to response"
       (api/configure! :version "123")
-      (let [handler #(sut/ok %)
-            wrapped (sut/wrap-add-api-version handler)
+      (let [handler  #(sut/ok %)
+            wrapped  (sut/wrap-add-api-version handler)
             response (wrapped :foo)]
         (should= "123" (-> response :body :version))))
 
@@ -46,7 +46,7 @@
     (it "default handler"
       (api/configure! :ajax-on-ex 'c3kit.wire.ajax/default-ajax-ex-handler)
       (log/capture-logs
-        (let [wrapped (sut/wrap-catch-api-errors (fn [r] (throw (Exception. "test"))))
+        (let [wrapped  (sut/wrap-catch-api-errors (fn [r] (throw (Exception. "test"))))
               response (wrapped {:method :test})]
           (should= 200 (:status response))
           (should= :error (sut/status response))
@@ -85,6 +85,28 @@
         (should= "Oh Noez!" (-> response :body :flash first flashc/text))
         (should= :fail (-> response sut/status))
         (should= :fuzz-balz (-> response sut/payload))))
+    )
+
+  (context "flash"
+
+    (it "success"
+      (let [response (sut/flash-success (sut/ok) "hello")
+            flash (-> response :body :flash first)]
+        (should= "hello" (flashc/text flash))
+        (should= :success (flashc/level flash))))
+
+    (it "warn"
+      (let [response (sut/flash-warn (sut/ok) "hello")
+            flash (-> response :body :flash first)]
+        (should= "hello" (flashc/text flash))
+        (should= :warn (flashc/level flash))))
+
+    (it "error"
+      (let [response (sut/flash-error (sut/ok) "hello")
+            flash (-> response :body :flash first)]
+        (should= "hello" (flashc/text flash))
+        (should= :error (flashc/level flash))))
+
     )
   )
 

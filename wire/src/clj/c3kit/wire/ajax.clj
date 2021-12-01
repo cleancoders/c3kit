@@ -1,12 +1,14 @@
 (ns c3kit.wire.ajax
   (:require
     [c3kit.apron.log :as log]
+    [c3kit.apron.util :as util]
     [c3kit.apron.utilc :as utilc]
     [c3kit.wire.api :as api]
     [c3kit.wire.apic :as apic]
     [c3kit.wire.flash :as flash]
+    [c3kit.wire.flashc :as flashc]
     [ring.util.response :as response]
-    [c3kit.apron.util :as util]))
+    ))
 
 (defn response [body] (response/response body))
 
@@ -31,6 +33,12 @@
   ([uri payload msg] (-> (apic/redirect uri payload)
                          (apic/flash-warn msg)
                          response)))
+
+(defn flash-success [response msg] (update response :body #(apic/flash-success % msg)))
+(defn flash-warn [response msg] (update response :body #(apic/flash-warn % msg)))
+(defn flash-error [response msg] (update response :body #(apic/flash-error % msg)))
+(defn first-flash [response] (-> response :body :flash first))
+(defn first-flash-text [response] (-> response first-flash flashc/text))
 
 (defn validation-errors-response [entity]
   (response (api/validation-errors-response entity)))

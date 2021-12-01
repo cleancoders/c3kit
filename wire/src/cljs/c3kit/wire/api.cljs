@@ -55,6 +55,7 @@
     (when (and version (not= version (:version @config)))
       (new-version! version))
     (when (#{:ok :redirect} status)
+      ;; TODO - MDM: invoking handler on redirect is problematic.
       (handle-payload handler payload))
     (when (and (= :redirect status) (not (:no-redirect options)))
       (redirect (:uri response)))
