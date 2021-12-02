@@ -54,8 +54,7 @@
       (doseq [f flash] (flash/add! f)))
     (when (and version (not= version (:version @config)))
       (new-version! version))
-    (when (#{:ok :redirect} status)
-      ;; TODO - MDM: invoking handler on redirect is problematic.
+    (when (= :ok status)
       (handle-payload handler payload))
     (when (and (= :redirect status) (not (:no-redirect options)))
       (redirect (:uri response)))

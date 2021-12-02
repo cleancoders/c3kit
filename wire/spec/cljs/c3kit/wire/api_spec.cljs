@@ -3,7 +3,6 @@
                                         should-not= should-have-invoked after before with-stubs with around
                                         should-contain should-not-contain stub should-not-have-invoked should-have-invoked]])
   (:require
-    [c3kit.apron.corec :as ccc]
     [c3kit.wire.api :as sut]
     [c3kit.wire.flash :as flash]
     [c3kit.wire.flashc :as flashc]
@@ -41,7 +40,7 @@
 
     (it "flash"
       (let [flash-msg (flashc/warn "blah")
-            response {:status :ok :uri "/somewhere" :flash [flash-msg]}]
+            response  {:status :ok :uri "/somewhere" :flash [flash-msg]}]
         (sut/handle-api-response response @call)
         (should-contain flash-msg @flash/state)))
 
@@ -49,18 +48,18 @@
       (sut/configure! :version "a-version" :redirect-fn (stub :custom-redirect))
       (let [response {:status :redirect :uri "/somewhere"}]
         (sut/handle-api-response response @call)
-        (should-have-invoked :handler)
+        (should-not-have-invoked :handler)
         (should-have-invoked :custom-redirect {:with ["/somewhere"]})))
 
     (it "redirect - :no-redirect"
       (with-redefs [cc/redirect! (stub :goto!)]
         (let [response {:status :redirect :uri "/somewhere"}]
           (sut/handle-api-response response (assoc-in @call [:options :no-redirect] true))
-          (should-have-invoked :handler)
+          (should-not-have-invoked :handler)
           (should-not-have-invoked :goto! {:with ["/somewhere"]}))))
 
     (it ":after-all option"
-      (let [response {:status :ok :uri "/somewhere"}
+      (let [response      {:status :ok :uri "/somewhere"}
             after-handler (stub :after)]
         (sut/handle-api-response response (assoc-in @call [:options :after-all] after-handler))
         (should-have-invoked :after)))

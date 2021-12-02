@@ -52,8 +52,7 @@
 
 (defn redirect
   ([uri] {:status :redirect :uri uri})
-  ([uri payload] {:status :redirect :uri uri :payload payload})
-  ([uri payload msg] (flash-error (redirect uri payload) msg)))
+  ([uri msg] (flash-warn (redirect uri) msg)))
 
 (defn status [response] (:status response))
 (defn error? [response] (= :error (:status response)))

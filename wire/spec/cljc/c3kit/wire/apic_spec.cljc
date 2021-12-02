@@ -49,13 +49,12 @@
         (should= "No!" (sut/flash-text response 0))))
 
     (it "redirect"
-      (should= {:status :redirect :uri "/path"} (sut/redirect "/path"))
-      (should= {:status :redirect :uri "/path" :payload :foo} (sut/redirect "/path" :foo)))
+      (should= {:status :redirect :uri "/path"} (sut/redirect "/path")))
 
     (it "redirect with flash"
-      (let [response (sut/redirect "/path" :bar "No!")]
-        (should= {:status :redirect :uri "/path" :payload :bar} (dissoc response :flash))
-        (should= :error (sut/flash-level response 0))
+      (let [response (sut/redirect "/path" "No!")]
+        (should= {:status :redirect :uri "/path"} (dissoc response :flash))
+        (should= :warn (sut/flash-level response 0))
         (should= "No!" (sut/flash-text response 0))))
 
     (it "error?"

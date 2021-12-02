@@ -42,7 +42,7 @@
           (.append form-data (name k) v))
         (assoc request :body form-data))
       (if (= "GET" method)
-        (assoc request :query-params params)1
+        (assoc request :query-params params)
         (assoc request :form-params params)))))
 
 (defn- do-ajax-request [{:keys [method method-fn url params] :as ajax-call}]

@@ -29,16 +29,11 @@
 
 (defn redirect
   ([uri] (response (apic/redirect uri)))
-  ([uri payload] (response (apic/redirect uri payload)))
-  ([uri payload msg] (-> (apic/redirect uri payload)
-                         (apic/flash-warn msg)
-                         response)))
+  ([uri msg] (response (apic/redirect uri msg))))
 
 (defn flash-success [response msg] (update response :body #(apic/flash-success % msg)))
 (defn flash-warn [response msg] (update response :body #(apic/flash-warn % msg)))
 (defn flash-error [response msg] (update response :body #(apic/flash-error % msg)))
-(defn first-flash [response] (-> response :body :flash first))
-(defn first-flash-text [response] (-> response first-flash flashc/text))
 
 (defn validation-errors-response [entity]
   (response (api/validation-errors-response entity)))
@@ -49,6 +44,9 @@
 
 (defn payload [response] (-> response :body :payload))
 (defn status [response] (-> response :body :status))
+(defn flash [response] (-> response :body :flash))
+(defn first-flash [response] (-> response :body :flash first))
+(defn first-flash-text [response] (-> response first-flash flashc/text))
 
 (defn api-not-found-handler [request] (fail (:uri request) (str "API not found: " (:uri request))))
 
