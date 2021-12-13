@@ -1,10 +1,15 @@
 (ns c3kit.bucket.db-spec
+  (:import (java.util Date))
   (:require
     [c3kit.bucket.db :as db]
     [c3kit.bucket.dbc-spec :as dbc-spec]
     [c3kit.bucket.spec-helper :as helper]
+    [c3kit.apron.time :as time :refer [seconds ago]]
     [speclj.core :refer :all]
     ))
+
+(def biby :undefined)
+(defn sleep [entity] (Thread/sleep 10) entity)
 
 (describe "DB"
 
@@ -103,14 +108,14 @@
     (helper/with-db-schemas [dbc-spec/bibelot])
 
     (it "loading from string key"
-      (let [saved (db/tx {:kind :bibelot :name "thingy"})
+      (let [saved  (db/tx {:kind :bibelot :name "thingy"})
             loaded (db/entity (str (:id saved)))]
         (should= :bibelot (:kind loaded))
         (should= "thingy" (:name loaded))
         (should= (:id loaded) (:id saved))))
 
     (it "loading from datomic entity"
-      (let [saved (db/tx {:kind :bibelot :name "thingy"})
+      (let [saved  (db/tx {:kind :bibelot :name "thingy"})
             loaded (db/entity (db/datomic-entity saved))]
         (should= :bibelot (:kind loaded))
         (should= "thingy" (:name loaded))
@@ -131,8 +136,8 @@
     (helper/with-db-schemas [dbc-spec/gewgaw])
 
     (it "async save"
-      (let [g1 {:kind :gewgaw :name "1"}
-            g2 {:kind :gewgaw :name "2"}
+      (let [g1     {:kind :gewgaw :name "1"}
+            g2     {:kind :gewgaw :name "2"}
             result @(db/atx* [g1 g2])]
         (should= "1" (:name (db/reload (first result))))
         (should= "2" (:name (db/reload (second result))))))
@@ -141,13 +146,16 @@
   (context "history"
 
     (helper/with-db-schemas [dbc-spec/bibelot])
+    (with biby (-> (db/tx :kind :bibelot :name "Biby" :size 1 :color "blue")
+                   sleep
+                   (db/tx :size 2)
+                   sleep
+                   (db/tx :color "green")
+                   sleep
+                   (db/tx :size 3 :color "red")))
 
     (it "of entity"
-      (let [biby (db/tx :kind :bibelot :name "Biby" :size 1 :color "blue")
-            biby (db/tx biby :size 2)
-            biby (db/tx biby :color "green")
-            biby (db/tx biby :size 3 :color "red")
-            history (db/history biby)]
+      (let [history (db/history @biby)]
         (should= 4 (count history))
         (doseq [h history]
           (should (:db/tx h))
@@ -157,6 +165,28 @@
         (should= {:name "Biby" :size 2 :color "green"} (select-keys (nth history 2) [:name :size :color]))
         (should= {:name "Biby" :size 3 :color "red"} (select-keys (nth history 3) [:name :size :color]))))
 
+    (it "created-at"
+      (let [moment (db/created-at @biby)
+            now    (time/now)]
+        (should-be-a Date moment)
+        (should (time/after? moment (-> 1 seconds ago)))
+        (should (time/before? moment now))))
+
+    (it "updated-at"
+      (Thread/sleep 10)
+      (let [updated (db/tx @biby :size 4)
+            moment  (db/updated-at updated)
+            _       (Thread/sleep 10)
+            now     (time/now)]
+        (should-be-a Date moment)
+        (should (time/after? moment (-> 1 seconds ago)))
+        (should (time/before? moment now))
+        (should (time/after? moment (db/created-at updated)))))
+
+    (it "with-timestamps"
+      (let [updated (db/tx @biby :size 4)
+            result  (db/with-timestamps updated)]
+        (should= (db/created-at updated) (:created-at result))
+        (should= (db/updated-at updated) (:updated-at result))))
     )
   )
-

@@ -51,7 +51,7 @@
 
 (defn build-attribute [kind [attr-name type & spec]]
   (let [options (set spec)
-        type (if (= :kw-ref type) :ref type)]
+        type    (if (= :kw-ref type) :ref type)]
     (->
       {
        :db/ident       (keyword (name kind) (name attr-name))
@@ -148,20 +148,20 @@
 (defn- cardinality-many-retract-forms [updated original]
   (reduce (fn [form [key val]]
             (if (or (set? val) (sequential? val))
-              (let [id (:db/id updated)
-                    o-val (set (map id-or-val (get original key)))
+              (let [id      (:db/id updated)
+                    o-val   (set (map id-or-val (get original key)))
                     missing (set/difference o-val (set val))]
                 (reduce #(conj %1 [:db/retract id key (id-or-val %2)]) form missing))
               form))
           [] updated))
 
 (defn update-form [id updated]
-  (let [original (into {} (api/entity (api/db @connection) id))
-        retracted-keys (doall (filter #(= nil (get updated %)) (keys original)))
-        updated (-> (apply dissoc updated retracted-keys)
-                    dissoc-nils
-                    (assoc :db/id id))
-        seq-retractions (cardinality-many-retract-forms updated original)
+  (let [original          (into {} (api/entity (api/db @connection) id))
+        retracted-keys    (doall (filter #(= nil (get updated %)) (keys original)))
+        updated           (-> (apply dissoc updated retracted-keys)
+                              dissoc-nils
+                              (assoc :db/id id))
+        seq-retractions   (cardinality-many-retract-forms updated original)
         field-retractions (retract-field-forms id original retracted-keys)]
     (concat [updated] seq-retractions field-retractions)))
 
@@ -173,8 +173,8 @@
       (list id (retract-form id))
       (throw (Exception. "Can't retract entity without an :id")))
     (let [kind (kind! entity)
-          id (or (:id entity) (tempid))
-          e (scope-attributes kind (dissoc entity :kind :id))]
+          id   (or (:id entity) (tempid))
+          e    (scope-attributes kind (dissoc entity :kind :id))]
       (if (tempid? id)
         (list id (insert-form id e))
         (list id (update-form id e))))))
@@ -198,16 +198,16 @@
     (when (seq e)
       (let [[id form] (tx-form e)
             result @(api/transact @connection form)
-            id (resolve-id result id)]
+            id     (resolve-id result id)]
         (tx-result id)))))
 
 (defn tx*
   "Transact multiple entities, synchronously"
   [entities]
   (let [id-forms (map tx-form (remove nil? entities))
-        tx-form (mapcat second id-forms)
-        result @(api/transact @connection tx-form)
-        ids (map #(resolve-id result (first %)) id-forms)]
+        tx-form  (mapcat second id-forms)
+        result   @(api/transact @connection tx-form)
+        ids      (map #(resolve-id result (first %)) id-forms)]
     (map tx-result ids)))
 
 (defn atx*
@@ -215,13 +215,13 @@
   Ideal for large imports or when multiple entities need to be transacted in a single transaction."
   [entities]
   (let [id-forms (map tx-form entities)
-        tx-form (mapcat second id-forms)
-        tx (api/transact-async @connection tx-form)]
+        tx-form  (mapcat second id-forms)
+        tx       (api/transact-async @connection tx-form)]
     (future
       (loop [done? (future-done? tx)]
         (if done?
           (let [result @tx
-                ids (map first id-forms)]
+                ids    (map first id-forms)]
             (map #(entity (resolve-id result %)) ids))
           (do
             (Thread/yield)
@@ -251,7 +251,7 @@
    (assert (even? (count pairs)) "must provide key value pairs")
    (let [pairs (partition 2 pairs)
          attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
-         vals (cons val1 (map second pairs))]
+         vals  (cons val1 (map second pairs))]
      (-> '[:find ?e :in $ :where]
          (concat (map where-clause attrs vals))
          (api/q (db))
@@ -263,7 +263,7 @@
   (assert (even? (count pairs)) "must provide key value pairs")
   (let [pairs (partition 2 pairs)
         attrs (map #(->attr-kw kind %) (map first pairs))
-        vals (map second pairs)]
+        vals  (map second pairs)]
     (let [q '[:find (count ?e) :in $ :where]
           q (concat q (map where-clause attrs vals))]
       (or (ffirst (api/q q (db))) 0))))
@@ -303,6 +303,11 @@
                          :in $ ?attribute
                          :where [?e ?attribute]] (db) (->attr-kw kind attr)))))
 
+(defn ->eid
+  "Returns the entity id"
+  [id-or-entity]
+  (if (number? id-or-entity) id-or-entity (:id id-or-entity)))
+
 (defn retract
   "Basically 'deletes' an entity."
   [id-or-entity]
@@ -310,31 +315,62 @@
       (assoc :kind :db/retract)
       tx))
 
-(defn tx-ids [entity-id]
+(defn tx-ids
+  "Returns a sorted list of all the transaction ids in which the entity was updated."
+  [eid]
   (->> (api/q
          '[:find ?tx
            :in $ ?e
            :where
            [?e _ _ ?tx _]]
-         (api/history (db)) entity-id)
+         (api/history (db)) eid)
        (sort-by first)
        (map first)))
 
-(defn entity-as-of-tx [db eid kind txid]
-  (let [tx (api/entity db txid)
-        timestamp (:db/txInstant tx)
+(defn entity-as-of-tx
+  "Loads the entity as it existed when the transaction took place, adding :db/tx (transaction id)
+   and :db/instant (date) attributes to the entity."
+  [db eid kind txid]
+  (let [tx         (api/entity db txid)
+        timestamp  (:db/txInstant tx)
         attributes (api/entity (api/as-of db txid) eid)]
     (when (seq attributes)
       (-> attributes
           (attributes->entity eid kind)
           (assoc :db/tx txid :db/instant timestamp)))))
 
-(defn history [entity]
-  (let [id (:id entity)
+(defn history
+  "Returns a list of every version of the entity form creation to current state,
+  with :db/tx and :db/instant attributes."
+  [entity]
+  (let [id   (:id entity)
         kind (:kind entity)]
     (assert id)
     (assert kind)
     (reduce #(conj %1 (entity-as-of-tx (db) id kind %2)) [] (tx-ids (:id entity)))))
+
+(defn created-at
+  "Returns the instant (java.util.Date) the entity was created."
+  [id-or-entity]
+  (let [eid (->eid id-or-entity)]
+    (ffirst (api/q '[:find (min ?inst)
+                     :in $ ?e
+                     :where [?e _ _ ?tx]
+                     [?tx :db/txInstant ?inst]] (api/history (db)) eid))))
+
+(defn updated-at
+  "Returns the instant (java.util.Date) this entity was last updated."
+  [id-or-entity]
+  (let [eid (->eid id-or-entity)]
+    (ffirst (api/q '[:find (max ?inst)
+                     :in $ ?e
+                     :where [?e _ _ ?tx]
+                     [?tx :db/txInstant ?inst]] (api/history (db)) eid))))
+
+(defn with-timestamps
+  "Adds :created-at and :updated-at timestamps to the entity."
+  [entity]
+  (assoc entity :created-at (created-at entity) :updated-at (updated-at entity)))
 
 (defn excise!
   "Remove entity from database history."
@@ -371,8 +407,8 @@
   []
   ; sample attr
   ;{:db/id 227, :db/ident :aircraft-model/model, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/index false}
-  (let [result (api/q '[:find ?v :where [_ :db.install/attribute ?v]] (db))
-        attrs (map #(->> % first (api/entity (db)) api/touch) result)
+  (let [result    (api/q '[:find ?v :where [_ :db.install/attribute ?v]] (db))
+        attrs     (map #(->> % first (api/entity (db)) api/touch) result)
         app-attrs (->> attrs
                        (remove #(reserved-attr-nses (namespace (:db/ident %))))
                        (sort-by #(str (:db/ident %))))]
