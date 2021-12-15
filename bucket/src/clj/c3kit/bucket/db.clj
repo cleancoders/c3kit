@@ -370,7 +370,7 @@
 (defn with-timestamps
   "Adds :created-at and :updated-at timestamps to the entity."
   [entity]
-  (assoc entity :created-at (created-at entity) :updated-at (updated-at entity)))
+  (assoc entity :db/created-at (created-at entity) :db/updated-at (updated-at entity)))
 
 (defn excise!
   "Remove entity from database history."

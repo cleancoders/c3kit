@@ -186,7 +186,7 @@
     (it "with-timestamps"
       (let [updated (db/tx @biby :size 4)
             result  (db/with-timestamps updated)]
-        (should= (db/created-at updated) (:created-at result))
-        (should= (db/updated-at updated) (:updated-at result))))
+        (should= (db/created-at updated) (:db/created-at result))
+        (should= (db/updated-at updated) (:db/updated-at result))))
     )
   )
