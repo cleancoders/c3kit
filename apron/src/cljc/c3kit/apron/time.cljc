@@ -173,7 +173,7 @@
 	(before (now) n))
 
 (defn from-now
-	"Returns a Date some time (n) before now."
+	"Returns a Date some time (n) after now."
 	[n]
 	(after (now) n))
 
