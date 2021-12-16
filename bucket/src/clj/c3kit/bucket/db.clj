@@ -74,10 +74,12 @@
 
 (defn db-as-of [t] (api/as-of (db) t))
 
-(defn scope-attributes [scope attributes]
+(defn scope-attribute [kind attr] (keyword (name kind) (name attr)))
+
+(defn scope-attributes [kind attributes]
   (into {}
         (map
-          (fn [[k v]] [(keyword (name scope) (name k)) v])
+          (fn [[k v]] [(scope-attribute kind k) v])
           attributes)))
 
 (defn transact!
@@ -165,19 +167,33 @@
         field-retractions (retract-field-forms id original retracted-keys)]
     (concat [updated] seq-retractions field-retractions)))
 
-(defn retract-form [id] (list [:db.fn/retractEntity id]))
+(defn maybe-retract-form [entity]
+  (when (dbc/retract? entity)
+    (if-let [id (:id entity)]
+      (list id (list [:db.fn/retractEntity id]))
+      (throw (Exception. "Can't retract entity without an :id")))))
+
+(defn maybe-cas-form [entity]
+  (when-let [old-vals (:cas (meta entity))]
+    (let [kind (:kind entity)
+          id   (:id entity)]
+      [id
+       (map (fn [[k v]]
+              (vector :db/cas id (scope-attribute kind k) v (get entity k)))
+            old-vals)])))
+
+(defn tx-entity-form [entity]
+  (let [kind (kind! entity)
+        id   (or (:id entity) (tempid))
+        e    (scope-attributes kind (dissoc entity :kind :id))]
+    (if (tempid? id)
+      (list id (insert-form id e))
+      (list id (update-form id e)))))
 
 (defn tx-form [entity]
-  (if (dbc/retract? entity)
-    (if-let [id (:id entity)]
-      (list id (retract-form id))
-      (throw (Exception. "Can't retract entity without an :id")))
-    (let [kind (kind! entity)
-          id   (or (:id entity) (tempid))
-          e    (scope-attributes kind (dissoc entity :kind :id))]
-      (if (tempid? id)
-        (list id (insert-form id e))
-        (list id (update-form id e))))))
+  (or (maybe-retract-form entity)
+      (maybe-cas-form entity)
+      (tx-entity-form entity)))
 
 (defn resolve-id [result id]
   (if (tempid? id)
@@ -314,6 +330,19 @@
   (-> (if (number? id-or-entity) {:id id-or-entity} id-or-entity)
       (assoc :kind :db/retract)
       tx))
+
+(defn cas
+  "compare-and-swap - Returns entity with CAS metadata.  When transacted, only the specified attributes will be saved.
+  If the values don't match, an exception will be thrown.  User cas-ex? to check for CAS conflict.
+  Only use with existing entities.
+  Do not include the entity along with a CAS version in the same transaction.
+  -> https://docs.datomic.com/cloud/transactions/transaction-functions.html#db-cas
+  -> https://docs.datomic.com/cloud/best.html#optimistic-concurrency"
+  [entity & old-attr-value-pairs]
+  (let [old-vals (ccc/->options old-attr-value-pairs)]
+    (with-meta entity {:cas old-vals})))
+
+(defn cas-ex? [e] (instance? java.util.concurrent.ExecutionException e))
 
 (defn tx-ids
   "Returns a sorted list of all the transaction ids in which the entity was updated."

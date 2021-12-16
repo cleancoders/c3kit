@@ -1,5 +1,6 @@
 (ns c3kit.bucket.db-spec
-  (:import (java.util Date))
+  (:import (java.util Date)
+           (clojure.lang ExceptionInfo))
   (:require
     [c3kit.bucket.db :as db]
     [c3kit.bucket.dbc-spec :as dbc-spec]
@@ -103,6 +104,38 @@
 
     )
 
+  (context "tx-form"
+
+    (helper/with-db-schemas [dbc-spec/bibelot])
+
+    (it "update"
+      (let [saved (db/tx {:kind :bibelot :name "thingy"})
+            id    (:id saved)
+            form  (db/tx-form (assoc saved :name "blah"))]
+        (should= [id [{:bibelot/name "blah", :db/id id}]] form)))
+
+    (it "insert "
+      (let [id (db/tempid)]
+        (with-redefs [db/tempid (fn [] id)]
+          (let [form (db/tx-form {:kind :bibelot :name "thingy"})]
+            (should= [id [{:bibelot/name "thingy", :db/id id}]] form)))))
+
+    (it "retract"
+      (let [saved (db/tx {:kind :bibelot :name "thingy"})
+            id    (:id saved)
+            form  (db/tx-form (with-meta saved {:retract true}))]
+        (should= [id [[:db.fn/retractEntity id]]] form)))
+
+    (it "cas"
+      (let [saved  (db/tx {:kind :bibelot :name "thingy"})
+            id     (:id saved)
+            update (assoc saved :name "blah")
+            cas    (db/cas update {:name "thingy"})
+            form   (db/tx-form cas)]
+        (should= [id [[:db/cas id :bibelot/name "thingy" "blah"]]] form)))
+
+    )
+
   (context "CRUD"
 
     (helper/with-db-schemas [dbc-spec/bibelot])
@@ -141,6 +174,33 @@
             result @(db/atx* [g1 g2])]
         (should= "1" (:name (db/reload (first result))))
         (should= "2" (:name (db/reload (second result))))))
+
+    (it "cas success"
+      (let [g1 (db/tx {:kind :gewgaw :name "1"})
+            update (assoc g1 :name "2")
+            cas-update (db/cas update :name "1")
+            updated (db/tx cas-update)]
+        (should= (db/reload g1) updated)
+        (should= "2" (:name updated))))
+
+    (it "cas with multiple attrs"
+      (let [g1 (db/tx {:kind :gewgaw :name "1" :thing 123})
+            update (assoc g1 :name "2" :thing 321)
+            cas-update (db/cas update :name "1" :thing 123)
+            updated (db/tx cas-update)]
+        (should= (db/reload g1) updated)
+        (should= "2" (:name updated))
+        (should= 321 (:thing updated))))
+
+    (it "cas failure"
+      (let [g1 (db/tx {:kind :gewgaw :name "1"})
+            update (assoc g1 :name "2")
+            cas-update (db/cas update :name "WRONG")]
+        (try
+          (db/tx cas-update)
+          (should-fail "tx should have failed")
+          (catch Exception e
+            (should= true (db/cas-ex? e))))))
     )
 
   (context "history"
