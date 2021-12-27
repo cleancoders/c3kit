@@ -43,6 +43,10 @@
     (sut/add-success! "m1")
     (sut/add-success! "m2")
     (sut/add-success! "m3")
+    (should= ["m1" "m2" "m3"] (sut/all-msg))
+    (should= "m1" (sut/first-msg))
+    (should= "m3" (sut/last-msg))
+
     (helper/render [sut/flash-root])
     (let [results (helper/select-all ".flash-message")]
       (should= 3 (count results))

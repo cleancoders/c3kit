@@ -15,6 +15,8 @@
 (defn clear! [] (reset! state {}))
 
 (defn first-msg [] (-> @state first flashc/text))
+(defn last-msg [] (-> @state last flashc/text))
+(defn all-msg [] (->> @state (map :text)))
 
 (defn flash= [f1 f2] (= (flashc/id f1) (flashc/id f2)))
 
