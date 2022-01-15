@@ -3,9 +3,12 @@
   #?(:clj (:import (java.util UUID)
                    (java.io ByteArrayInputStream ByteArrayOutputStream)))
   (:require
+    #?(:clj [clojure.data.json :as json])
+    [c3kit.apron.corec :as corec]
     [c3kit.apron.schema :as schema]
     [clojure.edn :as edn]
     [clojure.string :as str]
+    [clojure.walk :as walk]
     [cognitect.transit :as transit]
     ))
 
@@ -39,7 +42,7 @@
        (catch #?(:clj Exception :cljs :default) _
          nil)))
 
-; Transit ------------------------------------------------------------
+; ----- Transit -----
 
 #?(:cljs (def transit-reader (transit/reader :json)))
 #?(:cljs (def transit-writer (transit/writer :json)))
@@ -47,7 +50,7 @@
 (defn ->transit
   "Convert data into transit string"
   [data]
-  #?(:clj  (let [baos (ByteArrayOutputStream.)
+  #?(:clj  (let [baos   (ByteArrayOutputStream.)
                  writer (transit/writer baos :json)]
              (transit/write writer data)
              (.close baos)
@@ -61,11 +64,32 @@
              (transit/read (transit/reader in :json)))
      :cljs (transit/read transit-reader transit-str)))
 
-; Transit ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+; ^^^^^ Transit ^^^^^
 
-;; TODO - MDM: ->json and <-json would be nice.
+; ----- JSON -----
 
-; CSV ---------------------------------------------------------------
+(defn ->json
+  "Convert the clj data structure to JSON.
+  Note: this transition may be lossy since some clj data types (keywords) have no JSON equivalent."
+  [v]
+  #?(:clj  (json/write-str v)
+     :cljs (.stringify js/JSON (clj->js v))))
+
+(defn <-json
+  "Convert JSON into clj data structure."
+  [v]
+  #?(:clj  (json/read-str v)
+     :cljs (js->clj (.parse js/JSON v))))
+
+(defn <-json-kw
+  "Convert JSON into clj data structure with all keys as keywords"
+  [v]
+  #?(:clj  (json/read-str v :key-fn keyword)
+     :cljs (walk/keywordize-keys (<-json v))))
+
+; ^^^^^ JSON ^^^^^
+
+; ----- CSV -----
 
 (defn- csv-maybe-quote [value]
   (if (or (str/index-of value ",") (str/index-of value "\""))
@@ -84,7 +108,7 @@
   [rows]
   (str/join "\r\n" (map row->csv rows)))
 
-; CSV end ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+; ^^^^^ CSV ^^^^^
 
 (defn ->filename
   "Sanatize string into valid filename"

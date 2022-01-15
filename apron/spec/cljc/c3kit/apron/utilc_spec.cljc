@@ -33,7 +33,7 @@
   (context "transit"
 
     (it "uuid"
-      (let [uuid (ccc/new-uuid)
+      (let [uuid         (ccc/new-uuid)
             uuid-transit (sut/->transit uuid)]
         (should= uuid (sut/<-transit uuid-transit))))
 
@@ -41,8 +41,35 @@
       ;#uuid "53060bf1-971a-4d18-80fc-92a3112afd6e"
       (let [uuid (sut/->uuid-or-nil "53060bf1-971a-4d18-80fc-92a3112afd6e")
             data {:uuid uuid}
-            trs (sut/->transit data)]
+            trs  (sut/->transit data)]
         (should= data (sut/<-transit trs))))
+    )
+
+  (context "json"
+
+    (it "->json"
+      (should= "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}"
+               (sut/->json {:a  123
+                            :b  "hello"
+                            :c  [1 2 3]
+                            :d  {:e "f"}
+                            "g" 321})))
+
+    (it "<-json"
+      (should= {"a"  123
+                "b"  "hello"
+                "c"  [1 2 3]
+                "d"  {"e" "f"}
+                "g" 321}
+               (sut/<-json "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}")))
+
+    (it "<-json: keyword keys"
+      (should= {:a  123
+                :b  "hello"
+                :c  [1 2 3]
+                :d  {:e "f"}
+                :g 321}
+               (sut/<-json-kw "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}")))
     )
 
   (context "csv"
@@ -55,20 +82,20 @@
                     "1,2,3\r\n"
                     "a,b,c")
                (sut/->csv [["A" "B" "C"]
-                            [1 2 3]
-                            ['a 'b 'c]])))
+                           [1 2 3]
+                           ['a 'b 'c]])))
 
     (it "with comma in value"
       (should= (str "A,B\r\n"
                     "\"a, ok\",A-OK")
                (sut/->csv [["A" "B"]
-                            ["a, ok" "A-OK"]])))
+                           ["a, ok" "A-OK"]])))
 
     (it "with \" in value"
       (should= (str "A,B\r\n"
                     "\"\"\"a\"\"\",\"\"\"b\"")
                (sut/->csv [["A" "B"]
-                            ["\"a\"" "\"b"]])))
+                           ["\"a\"" "\"b"]])))
     )
 
   (it "->filename"
@@ -79,6 +106,5 @@
     (should= "foo_bar" (sut/->filename "foo-bar"))
     (should= "foo" (sut/->filename "foo/\\<>:\"|?*[]"))
     (should= "foo.bar" (sut/->filename "foo" "bar")))
-
 
   )
