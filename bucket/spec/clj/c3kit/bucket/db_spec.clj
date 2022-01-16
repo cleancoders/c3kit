@@ -7,7 +7,7 @@
     [c3kit.bucket.spec-helper :as helper]
     [c3kit.apron.time :as time :refer [seconds ago]]
     [speclj.core :refer :all]
-    ))
+    [c3kit.apron.log :as log]))
 
 (def biby :undefined)
 (defn sleep [entity] (Thread/sleep 10) entity)
@@ -136,6 +136,29 @@
 
     )
 
+  (context "where-clause"
+
+    (it "="
+      (should= [['?e :foo/bar 123]] (db/where-clause :foo/bar 123))
+      (should= [['?e :fizz/bang "whoosh"]] (db/where-clause :fizz/bang "whoosh")))
+
+    (it "not"
+      (should= ['(not [?e :foo/bar 123])] (db/where-clause :foo/bar ['not 123]))
+      (should= ['(not [?e :fizz/bang "whoosh"])] (db/where-clause :fizz/bang ['not "whoosh"])))
+
+    (it ">"
+      (with-redefs [gensym (fn [prefix] (symbol prefix))]
+        (should= '[[?e :foo/bar ?bar]
+                   [(> ?bar 123)]]
+                 (db/where-clause :foo/bar ['> 123]))))
+    (it ">"
+      (with-redefs [gensym (fn [prefix] (symbol prefix))]
+        (should= '[[?e :foo/bar ?bar]
+                   [(< ?bar 123)]]
+                 (db/where-clause :foo/bar ['< 123]))))
+    )
+
+
   (context "CRUD"
 
     (helper/with-db-schemas [dbc-spec/bibelot])
@@ -162,6 +185,23 @@
     (it "find all requires an attribute"
       (should-throw (db/find-all :bibelot)))
 
+    (it "1 nil attr"
+      (log/capture-logs
+        (db/tx {:kind :bibelot :name "thingy" :color nil :size 123})
+        (should= [] (db/find-by :bibelot :color nil))
+        (should-contain "find-by nil value (:bibelot :color), returning empty list." (log/captured-logs-str))))
+
+    )
+
+  (context "counting"
+
+    (helper/with-db-schemas [dbc-spec/bibelot])
+
+    (it "1 nil attr"
+      (log/capture-logs
+        (db/tx {:kind :bibelot :name "thingy" :color nil :size 123})
+        (should= 0 (db/count-by :bibelot :color nil))
+        (should-contain "count-by nil value (:bibelot :color), returning 0." (log/captured-logs-str))))
     )
 
   (context "transactions"
