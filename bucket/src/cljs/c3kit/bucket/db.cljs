@@ -124,15 +124,11 @@
   (let [kv-pairs (partition 2 kvs)
         kinds    (vals (get @db kind))]
     (assert (every? keyword? (map first kv-pairs)) "Attributes must be keywords")
-    (let [tester (spec->tester kv-pairs)] (filter tester kinds))
-    ;(filter (partial entity-matches? kv-pairs) kinds)
-    ))
+    (let [tester (spec->tester kv-pairs)] (filter tester kinds))))
 
-(defn count-by [kind & kv]
-  (count (apply find-by kind kv)))
-
-(defn ffind-by [kind & kvs]
-  (first (apply find-by kind kvs)))
+(defn ffind-by [kind & kvs] (first (apply find-by kind kvs)))
+(defn find-ids-by [kind & kvs] (map :id (apply find-by kind kvs)))
+(defn count-by [kind & kvs] (count (apply find-by kind kvs)))
 
 (defn retract [id-or-entity]
   (if-let [entity (entity id-or-entity)]

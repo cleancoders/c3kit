@@ -189,7 +189,7 @@
       (log/capture-logs
         (db/tx {:kind :bibelot :name "thingy" :color nil :size 123})
         (should= [] (db/find-by :bibelot :color nil))
-        (should-contain "find-by nil value (:bibelot :color), returning empty list." (log/captured-logs-str))))
+        (should-contain "search for nil value (:bibelot :color), returning no results." (log/captured-logs-str))))
 
     )
 
@@ -201,7 +201,7 @@
       (log/capture-logs
         (db/tx {:kind :bibelot :name "thingy" :color nil :size 123})
         (should= 0 (db/count-by :bibelot :color nil))
-        (should-contain "count-by nil value (:bibelot :color), returning 0." (log/captured-logs-str))))
+        (should-contain "search for nil value (:bibelot :color), returning no results." (log/captured-logs-str))))
     )
 
   (context "transactions"

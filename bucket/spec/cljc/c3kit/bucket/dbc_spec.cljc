@@ -217,6 +217,17 @@
       )
     )
 
+  (context "find-ids-by"
+
+    (helper/with-db-schemas [bibelot])
+
+    (it "find by attribute"
+      (let [saved  (db/tx {:kind :bibelot :name "thingy" :color "blue" :size 123})]
+        (should= [(:id saved)] (db/find-ids-by :bibelot :name "thingy"))
+        (should= [] (db/find-ids-by :bibelot :name "blah"))))
+
+    )
+
   (context "count-by"
 
     #?(:clj  (helper/with-db-schemas [bibelot thingy])

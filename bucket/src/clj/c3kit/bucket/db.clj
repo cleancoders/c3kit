@@ -121,8 +121,8 @@
 (defn entity-of-kind [kind id] (dbc/entity-of-kind (entity id) kind))
 (defn reload [e] (when-let [id (:id e)] (entity id)))
 
-(defn q->entities [result]
-  (map #(-> % first entity) result))
+(defn q->entities [result] (map #(-> % first entity) result))
+(defn q->ids [result] (map first result))
 
 (defn- id-or-val [thing] (or (:db/id thing) thing))
 
@@ -268,6 +268,14 @@
       (api/q (db))
       q->entities))
 
+(defn find-ids-where
+  "Search for ids of entities that match the datalog 'where' clause passed in."
+  [where]
+  (-> '[:find ?e :in $ :where]
+      (concat where)
+      (api/q (db))
+      q->ids))
+
 (defn count-where
   "Count all entities that match the datalog 'where' clause passed in."
   [where]
@@ -277,16 +285,16 @@
       ffirst
       (or 0)))
 
-;(defn- do-search
-;  ([q-fn kind attr value]
-;   (cond (nil? value) (do (log/warn (str "search for nil value (" kind " " attr "), returning no results.")) [])
-;         :else (q-fn (where-clause (->attr-kw kind attr) value))))
-;  ([q-fn kind attr1 val1 & pairs]
-;   (assert (even? (count pairs)) "must provide key value pairs")
-;   (let [pairs (partition 2 pairs)
-;         attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
-;         vals  (cons val1 (map second pairs))]
-;     (q-fn (mapcat where-clause attrs vals)))))
+(defn- do-search
+  ([q-fn default kind attr value]
+   (cond (nil? value) (do (log/warn (str "search for nil value (" kind " " attr "), returning no results.")) default)
+         :else (q-fn (where-clause (->attr-kw kind attr) value))))
+  ([q-fn _ kind attr1 val1 & pairs]
+   (assert (even? (count pairs)) "must provide key value pairs")
+   (let [pairs (partition 2 pairs)
+         attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
+         vals  (cons val1 (map second pairs))]
+     (q-fn (mapcat where-clause attrs vals)))))
 
 (defn find-by
   "Searches for all entities where the attribute(s) match the value(s).
@@ -298,41 +306,18 @@
       ['< value]    - (< % value)
   With a single attr, value is the only matching option, and it must not be nil. Otherwise, no results will be returned
   and a warning will be logged."
-  ([kind attr value]
-   (cond (nil? value) (do (log/warn (str "search for nil value (" kind " " attr "), returning no results.")) [])
-         :else (find-where (where-clause (->attr-kw kind attr) value))))
-  ([kind attr1 val1 & pairs]
-   (assert (even? (count pairs)) "must provide key value pairs")
-   (let [pairs (partition 2 pairs)
-         attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
-         vals  (cons val1 (map second pairs))]
-     (find-where (mapcat where-clause attrs vals)))))
+  [kind & pairs] (apply do-search find-where [] kind pairs))
 
 (defn find-ids-by
   "Searches for all entity ids where the attribute(s) match the value(s).
+  Faster search since no entity data is loaded.
   See find-by for value matching options."
-  ([kind attr value]
-   (cond (nil? value) (do (log/warn (str "find-by nil value (" kind " " attr "), returning empty list.")) [])
-         :else (find-where (where-clause (->attr-kw kind attr) value))))
-  ([kind attr1 val1 & pairs]
-   (assert (even? (count pairs)) "must provide key value pairs")
-   (let [pairs (partition 2 pairs)
-         attrs (map #(->attr-kw kind %) (cons attr1 (map first pairs)))
-         vals  (cons val1 (map second pairs))]
-     (find-where (mapcat where-clause attrs vals)))))
+  [kind & pairs] (apply do-search find-ids-where [] kind pairs))
 
 (defn count-by
   "Counts all entities where the attribute(s) match the value(s).
   See find-by for value matching options."
-  ([kind attr value]
-   (cond (nil? value) (do (log/warn (str "count-by nil value (" kind " " attr "), returning 0.")) 0)
-         :else (count-where (where-clause (->attr-kw kind attr) value))))
-  ([kind attr1 val1 & pairs]
-   (assert (even? (count pairs)) "must provide key value pairs")
-   (let [pairs (cons [attr1 val1] (partition 2 pairs))
-         attrs (map #(->attr-kw kind %) (map first pairs))
-         vals  (map second pairs)]
-     (count-where (mapcat where-clause attrs vals)))))
+  [kind & pairs] (apply do-search count-where 0 kind pairs))
 
 (defn ffind-by
   "Same as (first (find-by ...))"
