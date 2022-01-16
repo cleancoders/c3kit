@@ -65,6 +65,12 @@
       (not= v ev))))
 (defmethod -tester '> [[_ v]] (normal-tester > v))
 (defmethod -tester '< [[_ v]] (normal-tester < v))
+(defmethod -tester :default [values]
+  (let [v-set (set values)]
+    (fn [ev]
+      (if (multi? ev)
+        (some v-set ev)
+        (v-set ev)))))
 (defn- eq-tester [v] (normal-tester = v))
 
 (defn kv->tester [[k v]]

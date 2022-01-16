@@ -246,6 +246,7 @@
 
 (defn- ->attr-kw [kind attr] (keyword (name kind) (name attr)))
 
+(declare where-clause)
 (defmulti ^:private seq-where-clause (fn [attr value] (first value)))
 (defmethod seq-where-clause 'not [attr [_ value]]
   (if (nil? value)
@@ -257,6 +258,8 @@
           [(list f-sym attr-sym value)])))
 (defmethod seq-where-clause '> [attr [_ value]] (simple-where-fn attr value '>))
 (defmethod seq-where-clause '< [attr [_ value]] (simple-where-fn attr value '<))
+(defmethod seq-where-clause :default [attr values] (list (cons 'or (mapcat #(where-clause attr %) values))))
+
 
 (defn where-clause [attr value]
   (cond (nil? value) (list [(list 'missing? '$ '?e attr)])
@@ -304,6 +307,7 @@
   Values matching options:
       value         - (= % value)
       nil           - (nil? %)
+      [values]      - (some #(= % value) values)
       ['not value]  - (not (= % value))
       ['> value]    - (> % value)
       ['< value]    - (< % value)

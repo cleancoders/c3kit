@@ -157,6 +157,11 @@
         (should= '[[?e :foo/bar ?bar]
                    [(< ?bar 123)]]
                  (db/where-clause :foo/bar ['< 123]))))
+
+    (it "or"
+      (should= '[(or [?e :foo/bar 123]
+                     [?e :foo/bar 321])]
+               (db/where-clause :foo/bar [123 321])))
     )
 
 

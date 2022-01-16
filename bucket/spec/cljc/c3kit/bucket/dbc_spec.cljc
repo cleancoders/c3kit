@@ -184,6 +184,22 @@
         (should= [d2] (db/find-by :doodad :names ['not "bar"] :numbers 8))
         (should= [d1] (db/find-by :doodad :names ['not "bang"] :numbers 8))))
 
+    (it "or"
+      (let [b1 (db/tx :kind :bibelot :name "Bee" :color "red" :size 1)
+            b2 (db/tx :kind :bibelot :name "Bee" :color "blue" :size 2)
+            b3 (db/tx :kind :bibelot :name "Ant" :color "blue" :size 1)]
+        (should= [b1 b2 b3] (db/find-by :bibelot :name ["Bee" "Ant"]))
+        (should= [b3] (db/find-by :bibelot :name ["BLAH" "Ant"]))
+        (should= [] (db/find-by :bibelot :name ["BLAH" "ARG"]))))
+
+    (it "or multi-value"
+      (let [d1 (db/tx {:kind :doodad :names ["foo" "bar"] :numbers [8 42]})
+            d2 (db/tx {:kind :doodad :names ["foo" "bang"] :numbers [8 43]})]
+        (should= [d1 d2] (db/find-by :doodad :names ["foo" "BLAH"]))
+        (should= [d1 d2] (db/find-by :doodad :names ["bar" "bang"]))
+        (should= [d1] (db/find-by :doodad :names ["bar" "BLAH"]))
+        (should= [] (db/find-by :doodad :names ["ARG" "BLAH"]))))
+
     (context "<>: "
 
       (helper/with-db-schemas [bibelot thingy tempy])
@@ -230,7 +246,7 @@
     (helper/with-db-schemas [bibelot])
 
     (it "find by attribute"
-      (let [saved  (db/tx {:kind :bibelot :name "thingy" :color "blue" :size 123})]
+      (let [saved (db/tx {:kind :bibelot :name "thingy" :color "blue" :size 123})]
         (should= [(:id saved)] (db/find-ids-by :bibelot :name "thingy"))
         (should= [] (db/find-ids-by :bibelot :name "blah"))))
 
