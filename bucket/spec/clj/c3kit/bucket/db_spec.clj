@@ -144,7 +144,8 @@
 
     (it "not"
       (should= ['(not [?e :foo/bar 123])] (db/where-clause :foo/bar ['not 123]))
-      (should= ['(not [?e :fizz/bang "whoosh"])] (db/where-clause :fizz/bang ['not "whoosh"])))
+      (should= ['(not [?e :fizz/bang "whoosh"])] (db/where-clause :fizz/bang ['not "whoosh"]))
+      (should= ['[?e :fizz/bang]] (db/where-clause :fizz/bang ['not nil])))
 
     (it ">"
       (with-redefs [gensym (fn [prefix] (symbol prefix))]

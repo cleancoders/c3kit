@@ -246,8 +246,11 @@
 
 (defn- ->attr-kw [kind attr] (keyword (name kind) (name attr)))
 
-(defmulti seq-where-clause (fn [attr value] (first value)))
-(defmethod seq-where-clause 'not [attr [_ value]] (list (list 'not ['?e attr value])))
+(defmulti ^:private seq-where-clause (fn [attr value] (first value)))
+(defmethod seq-where-clause 'not [attr [_ value]]
+  (if (nil? value)
+    (list ['?e attr])
+    (list (list 'not ['?e attr value]))))
 (defn- simple-where-fn [attr value f-sym]
   (let [attr-sym (gensym (str "?" (name attr)))]
     (list ['?e attr attr-sym]

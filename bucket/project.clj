@@ -1,4 +1,4 @@
-(defproject com.cleancoders.c3kit/bucket "1.0.11"
+(defproject com.cleancoders.c3kit/bucket "1.0.12"
 
   :description "Clean Coders Clojure (C3) Kit - Bucket: Database API for datomic and in-memory."
   :url "https://cleancoders.com"

@@ -156,6 +156,15 @@
         (should= [b2] (db/find-by :bibelot :name "Bee" :size nil))
         (should= [b3] (db/find-by :bibelot :color "blue" :name nil))))
 
+    (it "find by not nil"
+      (let [b1 (db/tx :kind :bibelot :name "Bee" :size 1)
+            b2 (db/tx :kind :bibelot :name "Bee" :color "blue")
+            b3 (db/tx :kind :bibelot :size 1 :color "blue")]
+        (should= [b2] (db/find-by :bibelot :name "Bee" :color ['not nil]))
+        (should= [b1] (db/find-by :bibelot :name "Bee" :size ['not nil]))
+        (should= [b2] (db/find-by :bibelot :color "blue" :name ['not nil]))
+        (should= [b3] (db/find-by :bibelot :size 1 :color ['not nil]))))
+
     (it "not"
       (let [b1 (db/tx :kind :bibelot :name "Bee" :color "red" :size 1)
             b2 (db/tx :kind :bibelot :name "Bee" :color "blue" :size 2)
@@ -174,7 +183,6 @@
         (should= [d2] (db/find-by :doodad :names "foo" :numbers ['not 42]))
         (should= [d2] (db/find-by :doodad :names ['not "bar"] :numbers 8))
         (should= [d1] (db/find-by :doodad :names ['not "bang"] :numbers 8))))
-
 
     (context "<>: "
 
