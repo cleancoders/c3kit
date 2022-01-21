@@ -1,4 +1,4 @@
-(ns c3kit.wire.refresh
+(ns c3kit.apron.refresh
   (:import (java.io File)
            (java.net URL))
   (:require

@@ -1,4 +1,4 @@
-(ns c3kit.wire.verbose
+(ns c3kit.apron.verbose
   (:require
     [c3kit.apron.log :as log]
     ))
