@@ -2,10 +2,11 @@
   (:require
     [c3kit.apron.schema :as schema]
     [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it xit should= should-contain should-not-contain
-                                                      should-throw should-be-a should should-not]]
+                                                      should-throw should-be-a should should-not should-not-throw]]
     [clojure.string :as str]
     [c3kit.apron.utilc :as utilc]
-    [c3kit.apron.corec :as ccc])
+    [c3kit.apron.corec :as ccc]
+    [c3kit.apron.schema :as s])
   #?(:clj
      (:import (java.net URI)
               (java.util UUID))))
@@ -89,6 +90,7 @@
       (should= 3.14 (schema/->float 3.14) 0.00001)
       (should= 3.14 (schema/->float "3.14") 0.00001)
       (should= 42.0 (schema/->float "42") 0.00001)
+      (should= 3.14 (schema/->float 3.14M) 0.00001)
       (should-throw schema/stdex (schema/->float "fooey")))
 
     (it "to int"
@@ -100,7 +102,20 @@
       (should= 3 (schema/->int 3.9))
       (should= 42 (schema/->int "42"))
       (should= 3 (schema/->int "3.14"))
+      (should= 3 (schema/->int 3.14M))
       (should-throw schema/stdex (schema/->int "fooey")))
+
+    (it "to bigdec"
+      (should= nil (schema/->bigdec nil))
+      (should= nil (schema/->bigdec ""))
+      (should= nil (schema/->bigdec "\t"))
+      (should= 1M (schema/->bigdec 1))
+      (should= 3.14M (schema/->bigdec 3.14))
+      (should= 3.9M (schema/->bigdec 3.9))
+      (should= 42M (schema/->bigdec "42"))
+      (should= 3.14M (schema/->bigdec "3.14"))
+      (should= 3.14M (schema/->bigdec 3.14M))
+      (should-throw schema/stdex (schema/->bigdec "fooey")))
 
     (it "to date"
       (should= nil (schema/->date nil))
@@ -121,7 +136,7 @@
       (should= a-uuid (schema/->uuid a-uuid))
       (should= a-uuid (schema/->uuid "1f50be30-1373-40b7-acce-5290b0478fbe"))
       (should= (schema/->uuid "53060bf1-971a-4d18-80fc-92a3112afd6e") (schema/->uuid #uuid "53060bf1-971a-4d18-80fc-92a3112afd6e"))
-      (let [uuid2 (ccc/new-uuid)
+      (let [uuid2        (ccc/new-uuid)
             transit-uuid (utilc/<-transit (utilc/->transit uuid2))]
         (should= uuid2 (schema/->uuid transit-uuid)))
       (should-throw schema/stdex (schema/->uuid 123)))
@@ -135,7 +150,8 @@
     (context "from spec"
 
       (it "with missing type"
-        (should-throw schema/stdex "unhandled coersion" (schema/coerce-value {} 123)))
+        (prn "START")
+        (should-throw schema/stdex "unhandled coersion type: nil" (schema/coerce-value {} 123)))
 
       (it "of boolean"
         (should= true (schema/coerce-value {:type :boolean} 123)))
@@ -152,6 +168,9 @@
       (it "of float"
         (should= 123.4 (schema/coerce-value {:type :float} "123.4") 0.0001)
         (should= 123.4 (schema/coerce-value {:type :double} "123.4") 0.0001))
+
+      (it "of bigdec"
+        (should= 123.4M (schema/coerce-value {:type :bigdec} "123.4")))
 
       (it "with custom coercsions"
         (let [spec {:type :string :coerce [str/trim reverse #(apply str %)]}]
@@ -179,7 +198,7 @@
           (should= 4.1415 (last result) 0.0001)))
 
       (it "missing multiple type coercer"
-        (should-throw schema/stdex "unhandled coersion"
+        (should-throw schema/stdex "unhandled coersion type: :blah"
                       (schema/coerce-value {:type [:blah]} nil)))
 
       (it "of entity"
@@ -244,101 +263,109 @@
     (context "from spec"
 
       (it "with missing type"
-        (should-throw schema/stdex "unhandled validation" (schema/validate-value {} 123)))
+        (should-throw schema/stdex "unhandled validation type: nil" (schema/validate-value! {} 123)))
 
       (it "of booleans"
-        (should= true (schema/validate-value {:type :boolean} true))
-        (should= true (schema/validate-value {:type :boolean} false))
-        (should= false (schema/validate-value {:type :boolean} 123)))
+        (should= true (schema/valid-value? {:type :boolean} true))
+        (should= true (schema/valid-value? {:type :boolean} false))
+        (should= false (schema/valid-value? {:type :boolean} 123)))
 
       (it "of strings"
-        (should= true (schema/validate-value {:type :string} "123"))
-        (should= false (schema/validate-value {:type :string} 123)))
+        (should= true (schema/valid-value? {:type :string} "123"))
+        (should= false (schema/valid-value? {:type :string} 123)))
 
       (it "of keywords"
-        (should= true (schema/validate-value {:type :keyword} :abc))
-        (should= false (schema/validate-value {:type :keyword} "abc"))
-        (should= false (schema/validate-value {:type :keyword} 123)))
+        (should= true (schema/valid-value? {:type :keyword} :abc))
+        (should= false (schema/valid-value? {:type :keyword} "abc"))
+        (should= false (schema/valid-value? {:type :keyword} 123)))
 
       (it "of kw-ref"
-        (should= true (schema/validate-value {:type :kw-ref} :abc))
-        (should= false (schema/validate-value {:type :kw-ref} "abc"))
-        (should= false (schema/validate-value {:type :kw-ref} 123)))
+        (should= true (schema/valid-value? {:type :kw-ref} :abc))
+        (should= false (schema/valid-value? {:type :kw-ref} "abc"))
+        (should= false (schema/valid-value? {:type :kw-ref} 123)))
 
       (it "of int"
-        (should= true (schema/validate-value {:type :int} 123))
-        (should= false (schema/validate-value {:type :int} 123.45))
-        (should= true (schema/validate-value {:type :long} 123))
-        (should= false (schema/validate-value {:type :long} 123.45)))
+        (should= true (schema/valid-value? {:type :int} 123))
+        (should= false (schema/valid-value? {:type :int} 123.45))
+        (should= true (schema/valid-value? {:type :long} 123))
+        (should= false (schema/valid-value? {:type :long} 123.45)))
 
       (it "of ref"
-        (should= true (schema/validate-value {:type :ref} 123))
-        (should= false (schema/validate-value {:type :ref} 123.45)))
+        (should= true (schema/valid-value? {:type :ref} 123))
+        (should= false (schema/valid-value? {:type :ref} 123.45)))
 
       (it "of float"
-        (should= true (schema/validate-value {:type :float} 123.456))
-        #?(:clj (should= false (schema/validate-value {:type :float} 123)))
-        (should= false (schema/validate-value {:type :float} "123"))
-        (should= true (schema/validate-value {:type :double} 123.456))
-        #?(:clj (should= false (schema/validate-value {:type :double} 123)))
-        (should= false (schema/validate-value {:type :double} "123")))
+        (should= true (schema/valid-value? {:type :float} 123.456))
+        #?(:clj (should= false (schema/valid-value? {:type :float} 123)))
+        #?(:clj (should= false (schema/valid-value? {:type :float} 123M)))
+        (should= false (schema/valid-value? {:type :float} "123"))
+        (should= true (schema/valid-value? {:type :double} 123.456))
+        #?(:clj (should= false (schema/valid-value? {:type :double} 123)))
+        #?(:clj (should= false (schema/valid-value? {:type :double} 123M)))
+        (should= false (schema/valid-value? {:type :double} "123")))
+
+      (it "of bigdec"
+        (should= true (schema/valid-value? {:type :bigdec} 123.456M))
+        #?(:clj (should= false (schema/valid-value? {:type :bigdec} 123.456)))
+        #?(:clj (should= false (schema/valid-value? {:type :bigdec} 123)))
+        (should= false (schema/valid-value? {:type :bigdec} "123")))
 
       (it "of date/instant"
-        (should= true (schema/validate-value {:type :instant} nil))
-        (should= false (schema/validate-value {:type :instant} "foo"))
-        (should= false (schema/validate-value {:type :instant} 123))
-        #?(:clj (should= true (schema/validate-value {:type :instant} (java.util.Date.))))
-        #?(:cljs (should= true (schema/validate-value {:type :instant} (js/Date.))))
-        #?(:cljs (should= false (schema/validate-value {:type :instant} (js/goog.date.Date.)))))
+        (should= true (schema/valid-value? {:type :instant} nil))
+        (should= false (schema/valid-value? {:type :instant} "foo"))
+        (should= false (schema/valid-value? {:type :instant} 123))
+        #?(:clj (should= true (schema/valid-value? {:type :instant} (java.util.Date.))))
+        #?(:cljs (should= true (schema/valid-value? {:type :instant} (js/Date.))))
+        #?(:cljs (should= false (schema/valid-value? {:type :instant} (js/goog.date.Date.)))))
 
       (it "of URI"
-        (should= true (schema/validate-value {:type :uri} nil))
-        (should= #?(:clj false :cljs true) (schema/validate-value {:type :uri} "foo"))
-        #?(:clj (should= true (schema/validate-value {:type :uri} (URI/create "foo"))))
-        (should= false (schema/validate-value {:type :uri} 123)))
+        (should= true (schema/valid-value? {:type :uri} nil))
+        (should= #?(:clj false :cljs true) (schema/valid-value? {:type :uri} "foo"))
+        #?(:clj (should= true (schema/valid-value? {:type :uri} (URI/create "foo"))))
+        (should= false (schema/valid-value? {:type :uri} 123)))
 
       (it "of UUID"
-        (should= true (schema/validate-value {:type :uuid} nil))
-        (should= false (schema/validate-value {:type :uuid} "foo"))
-        (should= true (schema/validate-value {:type :uuid} a-uuid))
-        (should= false (schema/validate-value {:type :uuid} "1234"))
-        (should= false (schema/validate-value {:type :uuid} 123)))
+        (should= true (schema/valid-value? {:type :uuid} nil))
+        (should= false (schema/valid-value? {:type :uuid} "foo"))
+        (should= true (schema/valid-value? {:type :uuid} a-uuid))
+        (should= false (schema/valid-value? {:type :uuid} "1234"))
+        (should= false (schema/valid-value? {:type :uuid} 123)))
 
       (it "of custom validation"
         (let [spec {:type :string :validate #(re-matches #"x+" %)}]
-          (should= true (schema/validate-value spec "xxx"))
-          (should= false (schema/validate-value spec "xox"))))
+          (should= true (schema/valid-value? spec "xxx"))
+          (should= false (schema/valid-value? spec "xox"))))
 
       (it "of multiple custom validations"
         (let [spec {:type :string :validate [#(not (nil? %)) #(<= 5 (count %))]}]
-          (should= true (schema/validate-value spec "abcdef"))
-          (should= false (schema/validate-value spec nil))))
+          (should= true (schema/valid-value? spec "abcdef"))
+          (should= false (schema/valid-value? spec nil))))
 
       (it "allows nils, unless specified"
-        (should= true (schema/validate-value {:type :string} nil))
-        (should= false (schema/validate-value {:type :string :validate [schema/present?]} nil))
-        (should= true (schema/validate-value {:type :int} nil))
-        (should= false (schema/validate-value {:type :int :validate [schema/present?]} nil))
-        (should= true (schema/validate-value {:type :ref} nil))
-        (should= false (schema/validate-value {:type :ref :validate [schema/present?]} nil))
-        (should= true (schema/validate-value {:type :float} nil))
-        (should= false (schema/validate-value {:type :float :validate [schema/present?]} nil))
-        (should= true (schema/validate-value {:type :instant} nil))
-        (should= false (schema/validate-value {:type :instant :validate [schema/present?]} nil)))
+        (should= true (schema/valid-value? {:type :string} nil))
+        (should= false (schema/valid-value? {:type :string :validate [schema/present?]} nil))
+        (should= true (schema/valid-value? {:type :int} nil))
+        (should= false (schema/valid-value? {:type :int :validate [schema/present?]} nil))
+        (should= true (schema/valid-value? {:type :ref} nil))
+        (should= false (schema/valid-value? {:type :ref :validate [schema/present?]} nil))
+        (should= true (schema/valid-value? {:type :float} nil))
+        (should= false (schema/valid-value? {:type :float :validate [schema/present?]} nil))
+        (should= true (schema/valid-value? {:type :instant} nil))
+        (should= false (schema/valid-value? {:type :instant :validate [schema/present?]} nil)))
 
       (it "of sequentials"
-        (should= true (schema/validate-value {:type [:float]} [32.1 3.1415]))
-        (should= false (schema/validate-value {:type [:float]} 3.1415))
-        (should= false (schema/validate-value {:type [:float]} ["3.1415"]))
-        (should= true (schema/validate-value {:type [:float]} nil)))
+        (should= true (schema/valid-value? {:type [:float]} [32.1 3.1415]))
+        (should= false (schema/valid-value? {:type [:float]} 3.1415))
+        (should= false (schema/valid-value? {:type [:float]} ["3.1415"]))
+        (should= true (schema/valid-value? {:type [:float]} nil)))
 
       (it "of sequentials with customs"
-        (should= true (schema/validate-value {:type [:float] :validate pos?} [32.1 3.1415]))
-        (should= false (schema/validate-value {:type [:float] :validate pos?} [32.1 -3.1415])))
+        (should= true (schema/valid-value? {:type [:float] :validate pos?} [32.1 3.1415]))
+        (should= false (schema/valid-value? {:type [:float] :validate pos?} [32.1 -3.1415])))
 
       (it "missing multiple type coercer"
-        (should-throw schema/stdex "unhandled validation"
-                      (schema/validate-value {:type [:blah]} nil)))
+        (should-throw schema/stdex "unhandled validation type: :blah"
+                      (schema/validate-value! {:type [:blah]} nil)))
 
       (it "of invalid entity"
         (let [result (schema/validate pet {:species  321
@@ -367,9 +394,51 @@
           (should-not-contain :birthday (:errors result))))
 
       (it "of entity level validations"
-        (let [spec (assoc pet :* {:species {:validate #(not (and (= "snake" (:species %))
-                                                                 (= "Fluffy" (:name %))))
-                                            :message  "Snakes are not fluffy!"}})
+        (let [spec    (assoc pet :* {:species {:validate #(not (and (= "snake" (:species %))
+                                                                    (= "Fluffy" (:name %))))
+                                               :message  "Snakes are not fluffy!"}})
+              result1 (schema/validate spec valid-pet)
+              result2 (schema/validate spec (assoc valid-pet :name "Fluffy" :species "snake"))]
+          (should= false (schema/error? result1))
+          (should= true (schema/error? result2))
+          (should= "Snakes are not fluffy!" (:species (schema/error-message-map result2)))))
+
+      (it ":validations validations/message pairs"
+        (let [spec    (merge-with merge pet
+                                  {:species {:validate    nil
+                                             :validations [{:validate nil? :message "species not nil"}]}
+                                   :name    {:validate    nil
+                                             :validations [{:validate [s/present? #(= "blah" %)] :message "bad name"}]}})
+              result1 (schema/validate spec (assoc valid-pet :species nil :name "blah"))
+              result2 (schema/validate spec (assoc valid-pet :name "Fluffy" :species "snake"))]
+          (should= false (schema/error? result1))
+          (should= true (schema/error? result2))
+          (should= "species not nil" (:species (schema/error-message-map result2)))
+          (should= "bad name" (:name (schema/error-message-map result2)))))
+
+      (it "validations stop on first failure"
+        (let [spec    (merge-with merge pet
+                                  {:species {:validate #(str/starts-with? % "s")
+                                             :message  "not s species"
+                                             :validations
+                                             [{:validate #(str/ends-with? % "e") :message "not *e species"}
+                                              {:validate #(= "snake" %) :message "not snake"}]}})
+              result1 (schema/validate spec (assoc valid-pet :species "snake"))
+              result2 (schema/validate spec (assoc valid-pet :species "swine"))
+              result3 (schema/validate spec (assoc valid-pet :species "snail"))
+              result4 (schema/validate spec (assoc valid-pet :species "crab"))]
+          (should= false (schema/error? result1))
+          (should= true (schema/error? result2))
+          (should= "not snake" (:species (schema/error-message-map result2)))
+          (should= true (schema/error? result3))
+          (should= "not *e species" (:species (schema/error-message-map result3)))
+          (should= true (schema/error? result4))
+          (should= "not s species" (:species (schema/error-message-map result4)))))
+
+      (it ":validation at entity level"
+        (let [spec    (assoc pet :* {:species {:validations [{:validate #(not (and (= "snake" (:species %))
+                                                                                   (= "Fluffy" (:name %))))
+                                                              :message  "Snakes are not fluffy!"}]}})
               result1 (schema/validate spec valid-pet)
               result2 (schema/validate spec (assoc valid-pet :name "Fluffy" :species "snake"))]
           (should= false (schema/error? result1))
@@ -386,13 +455,13 @@
 
     (it "with failed validation"
       (should-throw schema/stdex "invalid"
-                    (schema/conform-value {:type :int :validate [even?] :message "oh no!"} "123")))
+                    (schema/conform-value {:type :int :validate even? :message "oh no!"} "123")))
 
     (it "of int the must be present"
       (should-throw schema/stdex "invalid"
                     (schema/conform-value {:type :int :validate [schema/present?]} ""))
       (should-throw schema/stdex "invalid"
-                    (schema/conform-value {:type :long :validate [schema/present?]} "")))
+                    (schema/conform-value {:type :long :validate schema/present?} "")))
 
     (it "success"
       (should= 123 (schema/conform-value {:type :int :message "oh no!"} "123")))
@@ -415,12 +484,12 @@
         (should= "Fluffy" (:name result))
         (should= 12345 (:owner result))))
 
-    (it "of entity level opertations"
-      (let [spec (assoc pet :* {:species {:type     :ignore
-                                          :coerce   (constantly "snake")
-                                          :validate #(not (and (= "snake" (:species %))
-                                                               (= "Fluffyy" (:name %))))
-                                          :message  "Snakes are not fluffy!"}})
+    (it "of entity level operations"
+      (let [spec    (assoc pet :* {:species {:type     :ignore
+                                             :coerce   (constantly "snake")
+                                             :validate #(not (and (= "snake" (:species %))
+                                                                  (= "Fluffyy" (:name %))))
+                                             :message  "Snakes are not fluffy!"}})
             result1 (schema/conform spec (assoc valid-pet :name "Slimey"))
             result2 (schema/conform spec valid-pet)]
         (should= false (schema/error? result1))

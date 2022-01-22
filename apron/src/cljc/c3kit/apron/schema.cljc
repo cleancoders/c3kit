@@ -5,24 +5,27 @@
     [c3kit.apron.corec :as ccc]
     [clojure.edn :as edn]
     [clojure.string :as str]
-    #?(:cljs [com.cognitect.transit.types]) ;; https://github.com/cognitect/transit-cljs/issues/41
+    #?(:cljs [com.cognitect.transit.types])                 ;; https://github.com/cognitect/transit-cljs/issues/41
     ))
 
-(comment "Schema Sample"
-         {:field {:type     :string                         ; see type-validators for list
-                  :db       [:unique-value]                       ; passed to database
-                  :coerce   [#(str % "y")]                  ; single/list of coerce fns
-                  :validate [#(> (count %) 1)]              ; single/list of validation fns
-                  :message  "message describing the field"
-                  :present  [#(str %)]                      ; single/list of presentation fns
-                  }})
+(comment
+  "Schema Sample"
+  {:field
+   {:type        :string                                    ;; see type-validators for list
+    :db          [:unique-value]                            ;; passed to database
+    :coerce      [#(str % "y")]                             ;; single/list of coerce fns
+    :validate    [#(> (count %) 1)]                         ;; single/list of validation fns
+    :message     "message describing the field"             ;; coerce failure message (or :validate failure message)
+    :validations [{:validate fn :message "msg"}]            ;; multiple validation/message pairs
+    :present     [#(str %)]                                 ;; single/list of presentation fns
+    }})
 
 (def stdex
   #?(:clj  clojure.lang.ExceptionInfo
      :cljs cljs.core/ExceptionInfo))
 
-(defn coerce-ex [v type]
-  (ex-info (str "can't convert " (pr-str v) " to " type) {:value v :type type}))
+(defn coerce-ex [v type] (ex-info (str "can't convert " (pr-str v) " to " type) {:value v :type type}))
+(defn coerce-ex? [e] (and (instance? stdex e) (:coerce? (ex-data e))))
 
 (def date #?(:clj java.util.Date :cljs js/Date))
 
@@ -44,6 +47,8 @@
 (def email-pattern #"[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?")
 
 (defn email? [value] (if (re-matches email-pattern value) true false))
+
+(defn bigdec? [v] #?(:clj (instance? BigDecimal v) :cljs (number? v)))
 
 (defn uri? [value]
   #?(:clj  (instance? java.net.URI value)
@@ -96,6 +101,7 @@
     #?@(:cljs [(js/isNaN v) nil])
     (integer? v) (double v)
     (#?(:clj float? :cljs number?) v) v
+    (bigdec? v) #?(:clj (.doubleValue v) :cljs v)
     :else (throw (coerce-ex v "float"))))
 
 (defn ->int [v]
@@ -111,7 +117,24 @@
     #?@(:cljs [(js/isNaN v) nil])
     (integer? v) v
     (#?(:clj float? :cljs number?) v) (long v)
-    :else (throw (coerce-ex v "float"))))
+    (bigdec? v) #?(:clj (.intValue v) :cljs v)
+    :else (throw (coerce-ex v "inv"))))
+
+(defn ->bigdec [v]
+  (cond
+    (= nil v) nil
+    (string? v) (if (str/blank? v)
+                  nil
+                  (try
+                    #?(:clj  (bigdec v)
+                       :cljs (parse! js/parseFloat v))
+                    (catch #?(:clj Exception :cljs :default) _
+                      (throw (coerce-ex v "bigdec")))))
+    #?@(:cljs [(js/isNaN v) nil])
+    (integer? v) #?(:clj (bigdec v) :cljs (double v))
+    (#?(:clj float? :cljs number?) v) #?(:clj (bigdec v) :cljs v)
+    #?(:clj (bigdec? v)) #?(:clj v)
+    :else (throw (coerce-ex v "bigdec"))))
 
 (defn ->date [v]
   (cond
@@ -144,7 +167,8 @@
 ; Type Tables ---------------------------------------------
 
 (def type-validators
-  {:boolean (nil-or #(or (= true %) (= false %)))
+  {:bigdec  (nil-or bigdec?)
+   :boolean (nil-or #(or (= true %) (= false %)))
    :double  (nil-or #?(:clj float? :cljs number?))
    :float   (nil-or #?(:clj float? :cljs number?))
    :instant (nil-or #(instance? date %))
@@ -159,7 +183,8 @@
    :ignore  (constantly true)})
 
 (def type-coercers
-  {:boolean ->boolean
+  {:bigdec  ->bigdec
+   :boolean ->boolean
    :double  ->float
    :float   ->float
    :instant ->date
@@ -211,20 +236,20 @@
 
 (defn type-coercer! [type]
   (or (get type-coercers type)
-      (throw (ex-info (str "unhandled coersion type: " type) {}))))
+      (throw (ex-info (str "unhandled coersion type: " (pr-str type)) {:coerce? true}))))
 
 (defn type-validator! [type]
   (or (get type-validators type)
-      (throw (ex-info (str "unhandled validation type: " type) {}))))
+      (throw (ex-info (str "unhandled validation type: " (pr-str type)) {}))))
 
 (defn build-coersion [spec]
   (try
-    (let [type (:type spec)
-          customs (->vec (:coerce spec))
-          ?seq (multiple? type)
-          type (if ?seq (first type) type)
+    (let [type      (:type spec)
+          customs   (->vec (:coerce spec))
+          ?seq      (multiple? type)
+          type      (if ?seq (first type) type)
           coersions (conj customs (type-coercer! type))
-          coersion (fn [value] (reduce #(%2 %1) value coersions))]
+          coersion  (fn [value] (reduce #(%2 %1) value coersions))]
       (if ?seq
         #(mapv coersion (->seq %))
         coersion))
@@ -232,22 +257,44 @@
       #?(:clj Exception :cljs :default) _
       (throw (ex-info "unhandled coersion" {:spec spec})))))
 
-(defn build-validator [spec]
-  (try
-    (let [type (:type spec)
-          customs (->vec (:validate spec))
-          ?seq (multiple? type)
-          type (if ?seq (first type) type)
-          validators (cons (type-validator! type) customs)
-          validator (fn [value] (every? #(% value) validators))]
-      (if ?seq
-        #(if (nil? %)
-           (validator %)
-           (and (multiple? %) (every? validator %)))
-        #(validator %)))
-    (catch
-      #?(:clj Exception :cljs :default) e
-      (throw (ex-info "unhandled validation" {:spec spec} e)))))
+(defn -coerce-value! [coerce-fn value ?seq]
+  (if ?seq
+    (mapv #(coerce-fn %) (->seq value))
+    (coerce-fn value)))
+
+(defn- do-coersion [{:keys [type coerce message] :as spec} value]
+  (let [?seq        (multiple? type)
+        type        (if ?seq (first type) type)
+        coerce-type (type-coercer! type)
+        value       (if coerce
+                      (if (multiple? coerce)
+                        (reduce #(-coerce-value! %2 %1 ?seq) value coerce)
+                        (-coerce-value! coerce value ?seq))
+                      value)]
+    (-coerce-value! coerce-type value ?seq)))
+
+(defn- validation-ex [message value] (ex-info "invalid" {:invalid? true :message (or message "is invalid") :value value}))
+(defn- validation-ex? [e] (and (instance? stdex e)
+                               (:invalid? (ex-data e))))
+
+(defn- -validate-value! [valid? message value ?seq]
+  (if (and ?seq (not (nil? value)))
+    (doseq [v value] (when-not (valid? v) (throw (validation-ex message v))))
+    (when-not (valid? value) (throw (validation-ex message value)))))
+
+(defn- -validate*?-value! [valid? message value ?seq]
+  (if (multiple? valid?)
+    (doseq [v? valid?] (-validate-value! v? message value ?seq))
+    (-validate-value! valid? message value ?seq)))
+
+(defn- do-validation [{:keys [type validate message validations] :as spec} value]
+  (let [?seq (multiple? type)
+        type (if ?seq (first type) type)]
+    (when (and ?seq (not (multiple? value)) value) (throw (validation-ex (str "[" type "] expected") value)))
+    (-validate-value! (type-validator! type) message value ?seq)
+    (when validate (-validate*?-value! validate message value ?seq))
+    (doseq [{:keys [validate message]} validations]
+      (-validate*?-value! validate message value ?seq))))
 
 ; Error Handling ------------------------------------------
 
@@ -285,48 +332,56 @@
   "returns coerced value or throws an exception"
   ([schema key value] (coerce-value (get schema key) value))
   ([spec value]
-   (let [coersion (build-coersion spec)]
-     (try
-       (coersion value)
-       (catch
-         #?(:clj Exception :cljs :default) e
-         (throw (ex-info "coersion failed" {:message (:message spec "coersion failed") :value value} e)))))))
-
-(defn validate-value
-  "return true or falue"
-  ([schema key value] (validate-value (get schema key) value))
-  ([spec value]
-   (let [validator (build-validator spec)]
-     (if (validator value) true false))))
-
-(defn validate-coerced-value!
-  "throws an exception when validation fails, true otherwise. Does the work."
-  ([spec value coerced]
-   (if (try
-         (validate-value spec coerced)
+   #_(let [coersion (build-coersion spec)]
+       (try
+         (coersion value)
          (catch
            #?(:clj Exception :cljs :default) e
-           (ex-info "validation error" {:message (:message spec "is invalid") :value value :coerced coerced} e)))
-     coerced
-     (throw (ex-info "invalid" {:message (:message spec "is invalid") :value value :coerced coerced})))))
+           (throw (ex-info "coersion failed" {:message (:message spec "coersion failed") :value value} e)))))
+   (try
+     (do-coersion spec value)
+     (catch #?(:clj Exception :cljs :default) e
+       (if (coerce-ex? e)
+         (throw e)
+         (throw (ex-info "coersion failed" {:message (:message spec "coersion failed") :value value} e)))))))
 
 (defn validate-value!
-  "throws an exception when validation fails, true otherwise"
-  ([schema key value] (validate-coerced-value! (get schema key) value value))
-  ([spec value] (validate-coerced-value! spec value value)))
+  "throws an exception when validation fails, value otherwise"
+  ([schema key value] (validate-value! (get schema key) value))
+  ([spec value]
+   (do-validation spec value)
+   value))
+
+(defn valid-value?
+  "return true or false"
+  ([schema key value] (valid-value? (get schema key) value))
+  ([spec value]
+   (try (validate-value! spec value) true (catch #?(:clj Exception :cljs :default) _ false))))
+
+(defn validate-coerced-value!
+  "throws an exception when validation fails, value otherwise."
+  ([spec value coerced]
+   (try
+     (validate-value! spec coerced)
+     coerced
+     (catch
+       #?(:clj Exception :cljs :default) e
+       (if (validation-ex? e)
+         (throw e)
+         (throw (ex-info "validation error" {:message (:message spec "is invalid") :value value :coerced coerced} e)))))))
 
 (defn conform-value
   "coerce and validate, returns coerced value or throws"
   ([schema key value] (conform-value (get schema key) value))
   ([spec value]
    (let [coerced (coerce-value spec value)]
-     (and (validate-coerced-value! spec value coerced) coerced))))
+     (validate-coerced-value! spec value coerced))))
 
 (defn present-value
   "returns a presentable representation of the value"
   ([schema key value] (present-value (get schema key) value))
   ([spec value]
-   (let [presenters (->vec (:present spec))
+   (let [presenters   (->vec (:present spec))
          presenter-fn (fn [v] (reduce #(%2 %1) v presenters))]
      (if (sequential? (:type spec))
        (when-let [result (seq (filter identity (map presenter-fn value)))] (vec result))
@@ -348,7 +403,7 @@
   (loop [errors {} result {} specs schema]
     (if (seq specs)
       (let [[key spec] (first specs)
-            value (get entity key)
+            value        (get entity key)
             field-result (result-or-ex processor spec value)]
         (if (ccc/ex? field-result)
           (recur (assoc errors key field-result) result (rest specs))
@@ -367,19 +422,20 @@
       (error-or-result errors schema entity result))))
 
 (defn- validate-whole-entity [result schema entity]
-  (loop [errors {} result result specs (filter (fn [[k s]] (:validate s)) (:* schema))]
-    (if (seq specs)
-      (let [[key spec] (first specs)
-            value (result-or-ex (fn [spec value]
-                                  (let [value (validate-value! spec value)]
-                                    (if (ccc/ex? value)
-                                      value
-                                      (get result key))))
-                                (assoc spec :type :ignore) result)]
-        (if (ccc/ex? value)
-          (recur (assoc errors key value) result (rest specs))
-          (recur errors (assoc result key value) (rest specs))))
-      (error-or-result errors schema entity result))))
+  (let [specs (filter (fn [[k s]] (or (:validate s) (:validations s))) (:* schema))]
+    (loop [errors {} result result specs specs]
+      (if (seq specs)
+        (let [[key spec] (first specs)
+              value (result-or-ex (fn [spec value]
+                                    (try
+                                      (validate-value! spec value)
+                                      (get result key)
+                                      (catch #?(:clj Exception :cljs :default) ex ex)))
+                                  (assoc spec :type :ignore) result)]
+          (if (ccc/ex? value)
+            (recur (assoc errors key value) result (rest specs))
+            (recur errors (assoc result key value) (rest specs))))
+        (error-or-result errors schema entity result)))))
 
 (defn- present-whole-entity [result schema entity]
   (loop [errors {} result result specs (filter (fn [[k s]] (:present s)) (:* schema))]
@@ -458,7 +514,7 @@
 
 (defn conform-all! [schema entities]
   (let [conforms (map #(conform schema %) entities)
-        errors (filter error? conforms)]
+        errors   (filter error? conforms)]
     (if (seq errors)
       (throw (ex-info "Unconformable entities" (make-error (apply merge (map #(get % :errors) errors)) schema entities conforms)))
       conforms)))

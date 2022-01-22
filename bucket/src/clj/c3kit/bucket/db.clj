@@ -9,8 +9,7 @@
     [c3kit.bucket.dbc :as dbc]
     [clojure.set :as set]
     [clojure.string :as str]
-    [datomic.api :as api]
-    [c3kit.apron.corec :as corec]))
+    [datomic.api :as api]))
 
 (defn connect [uri]
   (api/create-database uri)
