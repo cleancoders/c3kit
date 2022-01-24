@@ -1,3 +1,4 @@
+
 (ns c3kit.apron.legend
   (:require
     [c3kit.apron.schema :as schema]
@@ -5,7 +6,7 @@
 
 (def retract {:kind (schema/kind :db/retract) :id schema/id})
 
-(def index {})
+(def ^:dynamic index {})
 
 (defn init!
   [schemas]

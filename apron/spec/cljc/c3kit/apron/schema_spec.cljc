@@ -518,6 +518,20 @@
             result (schema/conform pet crufty)]
         (should= nil (:garbage result))
         (should-not-contain :garbage result)))
+
+    (it ":validations errors"
+      (let [spec    (merge-with merge pet
+                                {:species {:validate    nil
+                                           :validations [{:validate nil? :message "species not nil"}]}
+                                 :name    {:validate    nil
+                                           :coerce      nil
+                                           :validations [{:validate [s/present? #(= "blah" %)] :message "bad name"}]}})
+            result1 (schema/conform spec (assoc valid-pet :species nil :name "blah"))
+            result2 (schema/conform spec (assoc valid-pet :name "Fluffy" :species "snake"))]
+        (should= false (schema/error? result1))
+        (should= true (schema/error? result2))
+        (should= "species not nil" (:species (schema/error-message-map result2)))
+        (should= "bad name" (:name (schema/error-message-map result2)))))
     )
 
   (context "error messages"

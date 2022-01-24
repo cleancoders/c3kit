@@ -85,15 +85,12 @@
         (should-throw (db/entity-of-kind! :other (:id saved)))))
 
     (it "updating"
-      (try
-        (let [saved   (db/tx {:kind :bibelot :name "thingy"})
-              updated (db/tx saved :name "whatsamajigger")
-              loaded  (db/entity (:id saved))]
-          (should= "whatsamajigger" (:name loaded))
-          (should= (:id saved) (:id loaded))
-          (should= (:id saved) (:id updated)))
-        (catch #?(:clj Exception :cljs :default) e
-          (log/error e))))
+      (let [saved   (db/tx {:kind :bibelot :name "thingy"})
+            updated (db/tx saved :name "whatsamajigger")
+            loaded  (db/entity (:id saved))]
+        (should= "whatsamajigger" (:name loaded))
+        (should= (:id saved) (:id loaded))
+        (should= (:id saved) (:id updated))))
 
     (it "retracting via metadata"
       (let [saved   (db/tx {:kind :bibelot :name "thingy"})

@@ -55,6 +55,10 @@
                             :d  {:e "f"}
                             "g" 321})))
 
+    (it "->json empty values"
+      (should= "null" (sut/->json nil))
+      (should= "\"\"" (sut/->json "")))
+
     (it "<-json"
       (should= {"a"  123
                 "b"  "hello"
@@ -62,6 +66,10 @@
                 "d"  {"e" "f"}
                 "g" 321}
                (sut/<-json "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}")))
+
+    (it "<-json empty values"
+      (should= nil (sut/<-json nil))
+      (should= nil (sut/<-json "")))
 
     (it "<-json: keyword keys"
       (should= {:a  123

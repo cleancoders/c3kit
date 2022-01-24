@@ -78,8 +78,9 @@
 (defn <-json
   "Convert JSON into clj data structure."
   [v]
-  #?(:clj  (json/read-str v)
-     :cljs (js->clj (.parse js/JSON v))))
+  (when (and v (not (str/blank? v)))
+    #?(:clj  (json/read-str v)
+       :cljs (js->clj (.parse js/JSON v)))))
 
 (defn <-json-kw
   "Convert JSON into clj data structure with all keys as keywords"
