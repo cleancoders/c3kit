@@ -447,6 +447,13 @@
       )
     )
 
+  (context "coersion"
+
+    (it "multi field with nil value"
+      (should= nil (schema/coerce-value {:type [:int]} nil)))
+
+    )
+
   (context "conforming"
 
     (it "with failed coersion"

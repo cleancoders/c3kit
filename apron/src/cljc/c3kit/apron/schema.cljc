@@ -242,24 +242,9 @@
   (or (get type-validators type)
       (throw (ex-info (str "unhandled validation type: " (pr-str type)) {}))))
 
-(defn build-coersion [spec]
-  (try
-    (let [type      (:type spec)
-          customs   (->vec (:coerce spec))
-          ?seq      (multiple? type)
-          type      (if ?seq (first type) type)
-          coersions (conj customs (type-coercer! type))
-          coersion  (fn [value] (reduce #(%2 %1) value coersions))]
-      (if ?seq
-        #(mapv coersion (->seq %))
-        coersion))
-    (catch
-      #?(:clj Exception :cljs :default) _
-      (throw (ex-info "unhandled coersion" {:spec spec})))))
-
 (defn -coerce-value! [coerce-fn value ?seq]
   (if ?seq
-    (mapv #(coerce-fn %) (->seq value))
+    (seq (mapv #(coerce-fn %) (->seq value)))
     (coerce-fn value)))
 
 (defn- do-coersion [{:keys [type coerce message] :as spec} value]
@@ -282,10 +267,10 @@
     (doseq [v value] (when-not (valid? v) (throw (validation-ex message v))))
     (when-not (valid? value) (throw (validation-ex message value)))))
 
-(defn- -validate*?-value! [valid? message value ?seq]
-  (if (multiple? valid?)
-    (doseq [v? valid?] (-validate-value! v? message value ?seq))
-    (-validate-value! valid? message value ?seq)))
+(defn- -validate*?-value! [validate-fn message value ?seq]
+  (if (multiple? validate-fn)
+    (doseq [v-fn validate-fn] (-validate-value! v-fn message value ?seq))
+    (-validate-value! validate-fn message value ?seq)))
 
 (defn- do-validation [{:keys [type validate message validations] :as spec} value]
   (let [?seq (multiple? type)
@@ -338,12 +323,6 @@
   "returns coerced value or throws an exception"
   ([schema key value] (coerce-value (get schema key) value))
   ([spec value]
-   #_(let [coersion (build-coersion spec)]
-       (try
-         (coersion value)
-         (catch
-           #?(:clj Exception :cljs :default) e
-           (throw (ex-info "coersion failed" {:message (:message spec "coersion failed") :value value} e)))))
    (try
      (do-coersion spec value)
      (catch #?(:clj Exception :cljs :default) e

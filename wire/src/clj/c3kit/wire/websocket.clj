@@ -104,7 +104,7 @@
                          ))
 
 (defn refresh-handler []
-  (let [refresh! (util/resolve-var 'c3kit.wire.refresh/refresh!)]
+  (let [refresh! (util/resolve-var 'c3kit.apron.refresh/refresh!)]
     (fn [msg]
       (refresh!)
       (let [handler (util/resolve-var 'c3kit.wire.websocket/message-handler)]
