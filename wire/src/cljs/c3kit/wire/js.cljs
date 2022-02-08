@@ -47,6 +47,8 @@
 
 (defn timeout [millis f] (js/setTimeout f millis))
 (defn clear-timeout [timeout] (js/clearTimeout timeout))
+(defn interval [millis f] (js/setInterval f millis))
+(defn clear-interval [interval] (js/clearInterval interval))
 
 ;(defn navigate!
 ;  "Use for navigation between rich-client pages.  Passing a full URL will cause error."
