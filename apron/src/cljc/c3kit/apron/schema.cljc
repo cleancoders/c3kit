@@ -191,7 +191,7 @@
    :double    (nil-or #?(:clj float? :cljs number?))
    :float     (nil-or #?(:clj float? :cljs number?))
    :instant   (nil-or #(instance? date %))
-   :sql-date  (nil-or #?(:clj #(instance? java.sql.Date %) :cljs #(instance? date %)))
+   :date      (nil-or #?(:clj #(instance? java.sql.Date %) :cljs #(instance? date %)))
    :timestamp (nil-or #?(:clj #(instance? java.sql.Timestamp %) :cljs #(instance? date %)))
    :int       (nil-or integer?)
    :keyword   (nil-or keyword?)
@@ -209,7 +209,7 @@
    :double    ->float
    :float     ->float
    :instant   ->date
-   :sql-date  ->sql-date
+   :date      ->sql-date
    :timestamp ->timestamp
    :int       ->int
    :keyword   ->keyword

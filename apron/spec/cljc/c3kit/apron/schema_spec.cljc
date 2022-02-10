@@ -335,13 +335,13 @@
         #?(:cljs (should= false (schema/valid-value? {:type :instant} (js/goog.date.Date.)))))
 
       (it "of sql-date"
-        (should= true (schema/valid-value? {:type :sql-date} nil))
-        (should= false (schema/valid-value? {:type :sql-date} "foo"))
-        (should= false (schema/valid-value? {:type :sql-date} 123))
-        #?(:clj (should= false (schema/valid-value? {:type :sql-date} (java.util.Date.))))
-        #?(:clj (should= true (schema/valid-value? {:type :sql-date} (java.sql.Date. (System/currentTimeMillis)))))
-        #?(:cljs (should= true (schema/valid-value? {:type :sql-date} (js/Date.))))
-        #?(:cljs (should= false (schema/valid-value? {:type :sql-date} (js/goog.date.Date.)))))
+        (should= true (schema/valid-value? {:type :date} nil))
+        (should= false (schema/valid-value? {:type :date} "foo"))
+        (should= false (schema/valid-value? {:type :date} 123))
+        #?(:clj (should= false (schema/valid-value? {:type :date} (java.util.Date.))))
+        #?(:clj (should= true (schema/valid-value? {:type :date} (java.sql.Date. (System/currentTimeMillis)))))
+        #?(:cljs (should= true (schema/valid-value? {:type :date} (js/Date.))))
+        #?(:cljs (should= false (schema/valid-value? {:type :date} (js/goog.date.Date.)))))
 
       (it "of timestamp"
         (should= true (schema/valid-value? {:type :timestamp} nil))
