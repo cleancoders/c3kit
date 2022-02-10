@@ -121,9 +121,26 @@
       (should= nil (schema/->date nil))
       (should= now (schema/->date now))
       (should= now (schema/->date (.getTime now)))
-      ;(should-be-a #+clj java.util.Date #+cljs js/Date (schema/->date (clj-time/now)))
+      (should-be-a #?(:clj java.util.Date :cljs js/Date) (schema/->date now))
       (should-throw schema/stdex (schema/->date "now"))
       (should= now (schema/->date (pr-str now))))
+
+    (it "to sql date"
+      (should= nil (schema/->sql-date nil))
+      (should= #?(:clj (java.sql.Date. (.getTime now)) :cljs now) (schema/->sql-date now))
+      (should= #?(:clj (java.sql.Date. (.getTime now)) :cljs now) (schema/->sql-date (.getTime now)))
+      (should-be-a #?(:clj java.sql.Date :cljs js/Date) (schema/->sql-date now))
+      (should-throw schema/stdex (schema/->sql-date "now"))
+      (should= #?(:clj (java.sql.Date. (.getTime now)) :cljs now) (schema/->sql-date (pr-str now))))
+
+    (it "to sql timestamp"
+      (should= nil (schema/->timestamp nil))
+      (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp now))
+      (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp (.getTime now)))
+      (should-be-a #?(:clj java.sql.Timestamp :cljs js/Date) (schema/->timestamp now))
+      #?(:clj (should-be-a  java.sql.Timestamp (schema/->timestamp (java.sql.Date. (.getTime now)))))
+      (should-throw schema/stdex (schema/->timestamp "now"))
+      (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp (pr-str now))))
 
     (it "to uri"
       (should= nil (schema/->uri nil))
@@ -150,7 +167,6 @@
     (context "from spec"
 
       (it "with missing type"
-        (prn "START")
         (should-throw schema/stdex "unhandled coersion type: nil" (schema/coerce-value {} 123)))
 
       (it "of boolean"
@@ -317,6 +333,24 @@
         #?(:clj (should= true (schema/valid-value? {:type :instant} (java.util.Date.))))
         #?(:cljs (should= true (schema/valid-value? {:type :instant} (js/Date.))))
         #?(:cljs (should= false (schema/valid-value? {:type :instant} (js/goog.date.Date.)))))
+
+      (it "of sql-date"
+        (should= true (schema/valid-value? {:type :sql-date} nil))
+        (should= false (schema/valid-value? {:type :sql-date} "foo"))
+        (should= false (schema/valid-value? {:type :sql-date} 123))
+        #?(:clj (should= false (schema/valid-value? {:type :sql-date} (java.util.Date.))))
+        #?(:clj (should= true (schema/valid-value? {:type :sql-date} (java.sql.Date. (System/currentTimeMillis)))))
+        #?(:cljs (should= true (schema/valid-value? {:type :sql-date} (js/Date.))))
+        #?(:cljs (should= false (schema/valid-value? {:type :sql-date} (js/goog.date.Date.)))))
+
+      (it "of timestamp"
+        (should= true (schema/valid-value? {:type :timestamp} nil))
+        (should= false (schema/valid-value? {:type :timestamp} "foo"))
+        (should= false (schema/valid-value? {:type :timestamp} 123))
+        #?(:clj (should= false (schema/valid-value? {:type :timestamp} (java.util.Date.))))
+        #?(:clj (should= true (schema/valid-value? {:type :timestamp} (java.sql.Timestamp. (System/currentTimeMillis)))))
+        #?(:cljs (should= true (schema/valid-value? {:type :timestamp} (js/Date.))))
+        #?(:cljs (should= false (schema/valid-value? {:type :timestamp} (js/goog.date.Date.)))))
 
       (it "of URI"
         (should= true (schema/valid-value? {:type :uri} nil))

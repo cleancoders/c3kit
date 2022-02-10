@@ -141,10 +141,29 @@
     (nil? v) nil
     (instance? date v) v
     (integer? v) (doto (new #?(:clj java.util.Date :cljs js/Date)) (.setTime v))
-    ;#?(:clj (instance? org.joda.time.DateTime v)) #?(:clj (java.util.Date. (.getMillis v)))
     #?(:cljs (instance? goog.date.Date v)) #?(:cljs (js/Date. (.getTime v)))
     (and (string? v) (str/starts-with? v "#inst")) (edn/read-string v)
     :else (throw (coerce-ex v "date"))))
+
+(defn ->sql-date [v]
+  (cond
+    (nil? v) nil
+    (instance? #?(:clj java.sql.Date :cljs js/Date) v) v
+    #?(:clj (instance? java.util.Date v)) #?(:clj (java.sql.Date. (.getTime v)))
+    (integer? v) #?(:clj (java.sql.Date. v) :cljs (doto (new js/Date) (.setTime v)))
+    #?(:cljs (instance? goog.date.Date v)) #?(:cljs (js/Date. (.getTime v)))
+    (and (string? v) (str/starts-with? v "#inst")) #?(:clj (java.sql.Date. (.getTime (edn/read-string v))) :cljs (edn/read-string v))
+    :else (throw (coerce-ex v "sql-date"))))
+
+(defn ->timestamp [v]
+  (cond
+    (nil? v) nil
+    (instance? #?(:clj java.sql.Timestamp :cljs js/Date) v) v
+    #?(:clj (instance? java.util.Date v)) #?(:clj (java.sql.Timestamp. (.getTime v)))
+    (integer? v) #?(:clj (java.sql.Timestamp. v) :cljs (doto (new js/Date) (.setTime v)))
+    #?(:cljs (instance? goog.date.Date v)) #?(:cljs (js/Date. (.getTime v)))
+    (and (string? v) (str/starts-with? v "#inst")) #?(:clj (java.sql.Timestamp. (.getTime (edn/read-string v))) :cljs (edn/read-string v))
+    :else (throw (coerce-ex v "timestamp"))))
 
 (defn ->uri [v]
   (cond
@@ -167,36 +186,40 @@
 ; Type Tables ---------------------------------------------
 
 (def type-validators
-  {:bigdec  (nil-or bigdec?)
-   :boolean (nil-or #(or (= true %) (= false %)))
-   :double  (nil-or #?(:clj float? :cljs number?))
-   :float   (nil-or #?(:clj float? :cljs number?))
-   :instant (nil-or #(instance? date %))
-   :int     (nil-or integer?)
-   :keyword (nil-or keyword?)
-   :kw-ref  (nil-or keyword?)
-   :long    (nil-or integer?)
-   :ref     (nil-or integer?)
-   :string  (nil-or string?)
-   :uri     (nil-or uri?)
-   :uuid    (nil-or uuid?)
-   :ignore  (constantly true)})
+  {:bigdec    (nil-or bigdec?)
+   :boolean   (nil-or #(or (= true %) (= false %)))
+   :double    (nil-or #?(:clj float? :cljs number?))
+   :float     (nil-or #?(:clj float? :cljs number?))
+   :instant   (nil-or #(instance? date %))
+   :sql-date  (nil-or #?(:clj #(instance? java.sql.Date %) :cljs #(instance? date %)))
+   :timestamp (nil-or #?(:clj #(instance? java.sql.Timestamp %) :cljs #(instance? date %)))
+   :int       (nil-or integer?)
+   :keyword   (nil-or keyword?)
+   :kw-ref    (nil-or keyword?)
+   :long      (nil-or integer?)
+   :ref       (nil-or integer?)
+   :string    (nil-or string?)
+   :uri       (nil-or uri?)
+   :uuid      (nil-or uuid?)
+   :ignore    (constantly true)})
 
 (def type-coercers
-  {:bigdec  ->bigdec
-   :boolean ->boolean
-   :double  ->float
-   :float   ->float
-   :instant ->date
-   :int     ->int
-   :keyword ->keyword
-   :kw-ref  ->keyword
-   :long    ->int
-   :ref     ->int
-   :string  ->string
-   :uri     ->uri
-   :uuid    ->uuid
-   :ignore  identity})
+  {:bigdec    ->bigdec
+   :boolean   ->boolean
+   :double    ->float
+   :float     ->float
+   :instant   ->date
+   :sql-date  ->sql-date
+   :timestamp ->timestamp
+   :int       ->int
+   :keyword   ->keyword
+   :kw-ref    ->keyword
+   :long      ->int
+   :ref       ->int
+   :string    ->string
+   :uri       ->uri
+   :uuid      ->uuid
+   :ignore    identity})
 
 
 ; Common Schema Attributes --------------------------------
