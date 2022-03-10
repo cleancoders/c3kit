@@ -16,8 +16,9 @@
 (defn content []
   [:div
    [:input#-text-input
-    {:on-key-down #(swap! ratom assoc :key-down (wjs/e-key-code %))
-     :on-key-up   #(swap! ratom assoc :key-up (wjs/e-key-code %))}]])
+    {:on-key-down  #(swap! ratom assoc :key-down (wjs/e-key-code %))
+     :on-key-up    #(swap! ratom assoc :key-up (wjs/e-key-code %))
+     :on-key-press #(swap! ratom assoc :key-press (wjs/e-key-code %))}]])
 
 (describe "Spec Helpers"
 
@@ -35,6 +36,10 @@
     (it "simulates a key up event"
       (sut/key-up! "#-text-input" wjs/ENTER)
       (should= wjs/ENTER (:key-up @ratom)))
+
+    (it "simulates a key press event"
+      (sut/key-press! "#-text-input" wjs/ENTER)
+      (should= wjs/ENTER (:key-press @ratom)))
 
     )
   )

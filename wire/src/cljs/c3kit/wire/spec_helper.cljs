@@ -118,6 +118,16 @@
 	([thing key] (key-up thing key) (flush))
 	([root selector key] (key-up root selector key) (flush)))
 
+(defn key-press
+	([thing key]
+		((.-keyPress simulator) (resolve-node :key-press thing) (get keypresses key)))
+	([root selector key]
+		(key-press (resolve-node :key-press root selector) key)))
+
+(defn key-press!
+	([thing key] (key-press thing key) (flush))
+	([root selector key] (key-press root selector key) (flush)))
+
 (defn touch-end
 		([thing]
 			((.-touchend simulator) (resolve-node :touchend thing)))
