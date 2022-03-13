@@ -136,11 +136,11 @@
 												:years Calendar/YEAR
 												(throw (ex-info (str "invalid duration unit: " unit) {:unit unit})))]
 						 (.setTime calendar time)
-						 (.add calendar unit n)
+						 (.add calendar unit (int n))
 						 (.getTime calendar))
 		 :cljs (let [goog-dt (timec/from-long time)
 								 dir-fn (if (= + direction) time/plus time/minus)
-								 period (time/period unit n)
+								 period (time/period unit (int n))
 								 new-goog (dir-fn goog-dt period)]
 						 (timec/to-date new-goog))))
 
@@ -151,8 +151,8 @@
 	modify time)."
 	[time bit direction]
 	(cond
-		(number? bit) #?(:clj  (Date. (direction (.getTime time) bit))
-										 :cljs (js/Date. (direction (.getTime time) bit)))
+		(number? bit) #?(:clj  (Date. (direction (.getTime time) (int bit)))
+										 :cljs (js/Date. (direction (.getTime time) (int bit))))
 		(vector? bit) (mod-time-by-units time bit direction)))
 
 (defn before
