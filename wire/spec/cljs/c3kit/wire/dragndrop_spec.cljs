@@ -4,12 +4,11 @@
                                         should-contain should-not-contain should should-not-have-invoked stub]]
                    [c3kit.wire.spec-helperc :refer [should-select should-not-select]])
   (:require
-   [c3kit.wire.dragndrop2 :as sut]
-   [c3kit.wire.spec-helper :as helper]
    [c3kit.apron.log :as log]
-   [c3kit.wire.dnd-demo :as demo]
+   [c3kit.wire.dragndrop2 :as sut]
    [c3kit.wire.js :as wjs]
-   [reagent.dom :as dom]
+   [c3kit.wire.spec-helper :as helper]
+   [goog.dom :as dom]
    [reagent.core :as reagent]
    [speclj.stub :as stub]))
 
@@ -23,7 +22,7 @@
 (defn drag-out [_] (reset! state {:last-call :drag-out}) "on-drag-out")
 (defn drop! [{:keys [target-key]}] (swap! state assoc :drop target-key) "on-drag-drop")
 (defn drag-end [_] (swap! state assoc :last-call :drag-end) "on-drag-end")
-(defn fake-hiccup [node] [:div {:id "dragging-treat"} "give the dog a bone"])
+(defn fake-hiccup [_] [:div {:id "dragging-treat"} "give the dog a bone"])
 
 (def dnd (sut/context))
 
@@ -32,7 +31,6 @@
                        (sut/add-group :pet)
                        (sut/drag-from-to :treat :pet)
                        (sut/on-drag-start :treat drag-start)
-                       ;(sut/drag-fake-hiccup-fn :treat fake-hiccup)
                        (sut/on-drop :pet drop!)
                        (sut/on-drag-end :treat drag-end)
                        (sut/on-drag-over :treat drag-over)
@@ -59,9 +57,7 @@
 (def catnip-node (reagent/track #(when @bone (:node @catnip))))
 (def droppers (reagent/atom nil))
 (def brusly (reagent/track #(when @droppers (get-in @droppers ["brusly"]))))
-(def cheddar (reagent/track #(when @droppers (get-in @droppers ["cheddar"]))))
 (def brusly-node (reagent/track #(when @brusly (:node @brusly))))
-(def cheddar-node (reagent/track #(when @brusly (:node @cheddar))))
 
 (defn get-doc-listeners [kind]
   (->> (stub/invocations-of kind)
@@ -69,6 +65,7 @@
     (map #(second %))))
 
 (defn get-listeners [kind] (map #(second %) (stub/invocations-of kind)))
+(defn get-outer-html [hiccup] (dom/getOuterHtml (sut/vector->html hiccup)))
 
 (describe "Drag and Drop"
   (with-stubs)
@@ -79,6 +76,78 @@
                              sut/prevent-default (stub :prevent-default)
                              wjs/nod (stub :nod)]
                  (log/capture-logs (it))))
+
+  (context "Fake Hiccup"
+    (it "nil hiccup results in nil"
+      (should= nil (sut/fake-hiccup->dom nil)))
+    (it "renders vector function with no arguments"
+      (should= (get-outer-html (test-content))
+               (get-outer-html [test-content])))
+    (it "renders vector function with one argument"
+      (should= (get-outer-html [:h1 "Chocolate"])
+               (get-outer-html [(fn [a] [:h1 a]) "Chocolate"])))
+    (it "ignores nil hiccup values"
+      (should= (get-outer-html [:h1 "Hello!"])
+               (get-outer-html [:h1 nil "Hello!"])))
+
+    (context "tag name"
+      (it "h1 without classes or ids"
+        (should= "h1" (sut/->tag-name :h1)))
+      (it "div without classes or ids"
+        (should= "div" (sut/->tag-name :div)))
+      (it "an id"
+        (should= "h1" (sut/->tag-name :h1#some-id)))
+      (it "a class"
+        (should= "h1" (sut/->tag-name :h1.some-class)))
+      (it "an id, then a class"
+        (should= "h1" (sut/->tag-name :h1#-some-id.some-class)))
+      (it "a class, then an id"
+        (should= "h1" (sut/->tag-name :h1.some-class#some-id))))
+
+    (context "options"
+      (for [hiccup [nil [] [:h1] [:h1 "Hello, world!"]]]
+        (it (str "are non-existent with hiccup: " (or hiccup "nil"))
+          (should= {} (sut/hiccup-options hiccup))))
+      (for [options [{}
+                     {:class "hello"}
+                     {:id "world"}]]
+        (it (str "results in " options)
+          (should= options (sut/hiccup-options [:h1 options]))))
+      (it "results in one id from tag name"
+        (should= {:id "some-id"} (sut/hiccup-options [:h1#some-id])))
+      (it "results in one class from tag name"
+        (should= {:class "some-class"} (sut/hiccup-options [:h1.some-class])))
+      (it "results in id from tag and class from options"
+        (should= {:class "some-class" :id "some-id"} (sut/hiccup-options [:h1#some-id {:class "some-class"}])))
+      (it "results in class from tag and id from options"
+        (should= {:class "some-class" :id "some-id"} (sut/hiccup-options [:h1.some-class {:id "some-id"}])))
+      (it "results in multiple classes and ids from options"
+        (should= {:class "class-1 class-2 another-class"
+                  :id    "id-1 id-2 another-id"}
+                 (sut/hiccup-options [:h1#id-1#id-2.class-1.class-2#another-id.another-class])))
+      (it "merges tag options and vector options"
+        (should= {:class "hello world goodbye everyone"
+                  :id    "vec-id another-id chicken pollo"}
+                 (sut/hiccup-options [:h1#vec-id#another-id.hello.world
+                                      {:id    "chicken pollo"
+                                       :class "goodbye everyone"}]))))
+
+    (context "child elements"
+      (it "are non-existent when there is no content"
+        (should= [] (sut/child-elements [:h1])))
+      (it "are non-existent when there are vector options"
+        (should= [] (sut/child-elements [:h1 {:id "hello"}])))
+      (it "excludes tag and options"
+        (should= [[:h2 "Chicken"] [:h3 "Beef"]]
+                 (sut/child-elements [:h1 {:id "goodbye"}
+                                      [:h2 "Chicken"]
+                                      [:h3 "Beef"]])))
+      (it "is a single-element list when text is the only other item"
+        (should= ["Frogs"] (sut/child-elements [:h1 "Frogs"])))
+      (it "is a two-element list when there are other child elements"
+        (should= ["Element one" [:h2 "Element 2"]]
+                 (sut/child-elements [:h1 "Element one"
+                                      [:h2 "Element 2"]])))))
 
   (context "invalid dnd"
     (it "registers an unknown group"

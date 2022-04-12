@@ -1,15 +1,15 @@
 (ns c3kit.wire.dragndrop2
   (:import [goog History])
   (:require
-   [c3kit.apron.log :as log]
-   [c3kit.wire.dnd-mobile-patch]
-   [goog.dom :as dom]
-   [goog.events.EventHandler]
-   [goog.fx.DragDropGroup]
-   [goog.fx.DragDrop]
-   [c3kit.wire.js :as wjs]
-   [c3kit.apron.corec :as ccc]
-   [reagent.core :as reagent]))
+    [c3kit.apron.corec :as ccc]
+    [c3kit.apron.log :as log]
+    [c3kit.wire.dnd-mobile-patch]
+    [c3kit.wire.js :as wjs]
+    [clojure.string :as s]
+    [goog.dom :as dom]
+    [goog.events.EventHandler]
+    [goog.fx.DragDropGroup]
+    [goog.fx.DragDrop]))
 
 (def drag-threshold 5)
 
@@ -87,7 +87,7 @@
 (defn- dispatch-drag-over-out [dnd group member node target-group target-member target-node js-event event-type]
   (let [event (drag-event group member node target-group target-member target-node js-event)]
     (and (dispatch-event dnd group event-type event)
-      (dispatch-event dnd target-group event-type event))))
+         (dispatch-event dnd target-group event-type event))))
 
 (defn end-drag [dnd js-event]
   (let [{:keys [group member node drag-node document drag-listener end-listener drop-target]} (:active-drag @dnd)
@@ -113,29 +113,68 @@
   (wjs/add-listener doc "mousemove" drag-handler)
   (wjs/add-listener doc "mouseup" end-handler))
 
+(defn- attrs->list [selector attributes]
+  (->> (get attributes selector)
+       (map #(subs % 1))
+       (s/join " ")))
+
+(defn- tag-options [tag]
+  (let [attributes (->> tag str (re-seq #".+?(?=[#\.]|$)") rest (group-by first))]
+    {:id    (attrs->list \# attributes)
+     :class (attrs->list \. attributes)}))
+
+(defn- combine-attribute [key & options]
+  (let [value (->> options (map key) (s/join " ") s/trim)]
+    (when-not (empty? value)
+      {key value})))
+
+(defn hiccup-options [[tag options]]
+  (let [options (if (map? options) options {})
+        tag-options (tag-options tag)]
+    (merge options
+           (combine-attribute :id tag-options options)
+           (combine-attribute :class tag-options options))))
+
+(defn ->tag-name [tag]
+  (let [name (name tag)]
+    (->> [(s/index-of name "#")
+          (s/index-of name ".")
+          (count name)]
+         (filter pos?)
+         (apply min)
+         (subs name 0))))
+
+(defn child-elements [hiccup]
+  (if (map? (second hiccup))
+    (drop 2 hiccup)
+    (rest hiccup)))
+
 (declare fake-hiccup->dom)
 
-(defn- vector->html [hiccup]
-  (if (= :<> (first hiccup))
-    (map fake-hiccup->dom (rest hiccup))
-    (let [tag-name  (name (first hiccup))
-          options   (when (map? (second hiccup)) (clj->js (second hiccup)))
-          remaining (if options (drop 2 hiccup) (rest hiccup))
-          children  (map fake-hiccup->dom remaining)]
-      (dom/createDom tag-name options (clj->js (flatten children))))))
+(defn create-dom-node [[tag :as hiccup]]
+  (dom/createDom
+    (->tag-name tag)
+    (-> hiccup hiccup-options clj->js)
+    (->> hiccup child-elements (map fake-hiccup->dom) flatten clj->js)))
+
+(defn vector->html [[tag & children :as hiccup]]
+  (cond
+    (= :<> tag) (map fake-hiccup->dom children)
+    (fn? tag) (fake-hiccup->dom (apply tag children))
+    :else (create-dom-node hiccup)))
 
 (defn fake-hiccup->dom [hiccup]
   (cond (vector? hiccup) (vector->html hiccup)
-    (seq? hiccup) (map fake-hiccup->dom hiccup)
-    (string? hiccup) hiccup
-    (nil? hiccup) nil
-    :else (pr-str hiccup)))
+        (seq? hiccup) (map fake-hiccup->dom hiccup)
+        (string? hiccup) hiccup
+        (nil? hiccup) nil
+        :else (pr-str hiccup)))
 
 (defn create-drag-node [dnd group node]
   (if-let [hiccup-fn (get-in @dnd [:groups group :hiccup])]
-    (let [drag-node (hiccup-fn node)                        ;(-> (wjs/node-clone node true) hiccup-fn)
-          classes   (->> (clojure.string/split (wjs/node-classes node) #" ")
-                      (remove #(clojure.string/blank? %)))]
+    (let [drag-node (hiccup-fn node)
+          classes (->> (clojure.string/split (wjs/node-classes node) #" ")
+                       (remove #(clojure.string/blank? %)))]
       (doseq [class classes] (when class (wjs/node-add-class drag-node class)))
       drag-node)
     (wjs/node-clone node true)))
@@ -143,26 +182,26 @@
 (defn start-drag [dnd group member node js-event]
   (when (dispatch-event dnd group :drag-start (drag-event group member node js-event))
     (let [drag-handler (partial handle-drag dnd)
-          end-handler  (partial end-drag dnd)
-          doc          (wjs/document node)
-          drag-class   (get-in @dnd [:groups group :drag-class])
-          drag-node    (create-drag-node dnd group node)
-          drag-style   (wjs/node-style drag-node)
-          dnd-state    @dnd
-          scroll-x     (.-scrollX js/window)
-          scroll-y     (.-scrollY js/window)
+          end-handler (partial end-drag dnd)
+          doc (wjs/document node)
+          drag-class (get-in @dnd [:groups group :drag-class])
+          drag-node (create-drag-node dnd group node)
+          drag-style (wjs/node-style drag-node)
+          dnd-state @dnd
+          scroll-x (.-scrollX js/window)
+          scroll-y (.-scrollY js/window)
           [start-x start-y] (-> dnd-state :maybe-drag :start-position)
           [node-x node-y _ _] (wjs/node-bounds node)
-          offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
-          active-drag  {:group         group
-                        :member        member
-                        :node          node
-                        :drag-node     drag-node
-                        :offset        offset
-                        :document      doc
-                        :drag-listener drag-handler
-                        :end-listener  end-handler
-                        }]
+          offset [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
+          active-drag {:group         group
+                       :member        member
+                       :node          node
+                       :drag-node     drag-node
+                       :offset        offset
+                       :document      doc
+                       :drag-listener drag-handler
+                       :end-listener  end-handler
+                       }]
 
       (append-dragger doc drag-node drag-class drag-style)
       (add-doc-listeners doc drag-handler end-handler)
@@ -182,19 +221,19 @@
 (defn mouse-move [dnd group member node js-event]
   (let [[start-x start-y] (-> @dnd :maybe-drag :start-position)
         [x y] (wjs/e-coordinates js-event)
-        distance         (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
+        distance (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
         above-threshold? (> distance drag-threshold)
-        mouse-out?       (and (= "mouseout" (wjs/e-type js-event)) (= (-> @dnd :maybe-drag :node) (wjs/e-target js-event)))]
+        mouse-out? (and (= "mouseout" (wjs/e-type js-event)) (= (-> @dnd :maybe-drag :node) (wjs/e-target js-event)))]
     (when (or above-threshold? mouse-out?)
       (do (start-drag dnd group member node js-event)
-        (end-maybe-drag dnd nil))
+          (end-maybe-drag dnd nil))
       (wjs/nod js-event))))
 
 (defn draggable-mouse-down [dnd group member node js-event]
   (when (wjs/e-left-click? js-event)
-    (let [listener       (partial mouse-move dnd group member node)
-          doc-listener   (partial end-maybe-drag dnd)
-          doc            (wjs/document node)
+    (let [listener (partial mouse-move dnd group member node)
+          doc-listener (partial end-maybe-drag dnd)
+          doc (wjs/document node)
           start-position (wjs/e-coordinates js-event)]
       (wjs/add-listener node "mousemove" listener)
       (wjs/add-listener node "mouseout" listener)
@@ -238,11 +277,10 @@
     (when-not (get-in @dnd [:groups group]) (log/warn "registering to unknown group:" group member))
     (if node
       (let [member-data (-> {:node node}
-                          (maybe-make-draggable! dnd group member)
-                          (maybe-make-droppable! dnd group member))]
-        ;(when-not node-id (throw (ex-info "registered dragndrop nodes must have an id" {:group group :member member})))
+                            (maybe-make-draggable! dnd group member)
+                            (maybe-make-droppable! dnd group member))]
         (swap! dnd assoc-in [:groups group :members member] member-data))
-      (let [{:keys [node draggable-mousedown droppable-mouseenter droppable-mouseleave] :as drag}
+      (let [{:keys [node draggable-mousedown droppable-mouseenter droppable-mouseleave]}
             (get-in @dnd [:groups group :members member])]
         (when draggable-mousedown (wjs/remove-listener node "mousedown" draggable-mousedown))
         (when droppable-mouseenter (wjs/remove-listener node "mouseenter" droppable-mouseenter))
@@ -276,12 +314,3 @@
 (defn set-drag-class [dnd group classname]
   (swap! dnd assoc-in [:groups group :drag-class] classname)
   dnd)
-
-#_(defn drag-fake-hiccup-fn [dnd group fake-hiccup-fn]
-    (let [hiccup-fn (fn [node] (fake-hiccup->dom (fake-hiccup-fn node)))]
-      (swap! dnd assoc-in [:groups group :hiccup] hiccup-fn)
-      #_(set! (.-createDragElement js/document #_(get-group dnd group))
-          hiccup-fn)
-      dnd))
-
-
