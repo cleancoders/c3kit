@@ -4,9 +4,8 @@
     [c3kit.apron.corec :as ccc]
     [c3kit.apron.log :as log]
     [c3kit.wire.dnd-mobile-patch]
+    [c3kit.wire.fake-hiccup :as fake-hiccup]
     [c3kit.wire.js :as wjs]
-    [clojure.string :as s]
-    [goog.dom :as dom]
     [goog.events.EventHandler]
     [goog.fx.DragDropGroup]
     [goog.fx.DragDrop]))
@@ -48,14 +47,12 @@
     group
     (throw (ex-info (str "DnD group missing: " group) {:group group :dnd dnd}))))
 
-(defn prevent-default [event] (.preventDefault event))
-
 (defn drag-event
   ([source-group source-key source-node event]
    {:source-group  source-group
     :source-key    source-key
     :source-node   source-node
-    :browser-event (prevent-default event)})
+    :browser-event (wjs/nod event)})
   ([source-group source-key source-node target-group target-key target-node event]
    (assoc (drag-event source-group source-key source-node event)
      :target-group target-group
@@ -112,69 +109,6 @@
 (defn add-doc-listeners [doc drag-handler end-handler]
   (wjs/add-listener doc "mousemove" drag-handler)
   (wjs/add-listener doc "mouseup" end-handler))
-
-(defn- attrs->list [selector attributes]
-  (->> (get attributes selector)
-       (map #(subs % 1))
-       (s/join " ")))
-
-(defn- tag-options [tag]
-  (let [attributes (->> tag str (re-seq #".+?(?=[#\.]|$)") rest (group-by first))]
-    {:id    (attrs->list \# attributes)
-     :class (attrs->list \. attributes)}))
-
-(defn- combine-attribute [key & options]
-  (let [value (->> options (map key) (s/join " ") s/trim)]
-    (when-not (empty? value)
-      {key value})))
-
-(defn hiccup-options [[tag options]]
-  (let [options (if (map? options) options {})
-        tag-options (tag-options tag)]
-    (merge options
-           (combine-attribute :id tag-options options)
-           (combine-attribute :class tag-options options))))
-
-(defn ->tag-name [tag]
-  (let [name (name tag)]
-    (->> [(s/index-of name "#")
-          (s/index-of name ".")
-          (count name)]
-         (filter pos?)
-         (apply min)
-         (subs name 0))))
-
-(defn child-elements [hiccup]
-  (if (map? (second hiccup))
-    (drop 2 hiccup)
-    (rest hiccup)))
-
-(declare fake-hiccup->dom)
-
-(defn create-dom-node [[tag :as hiccup]]
-  (dom/createDom
-    (->tag-name tag)
-    (-> hiccup hiccup-options clj->js)
-    (->> hiccup child-elements (map fake-hiccup->dom) flatten clj->js)))
-
-(defn component->html [[tag & children]]
-  (let [component (apply tag children)]
-    (if (fn? component)
-      (fake-hiccup->dom (vec (concat [component] children)))
-      (fake-hiccup->dom component))))
-
-(defn vector->html [[tag & children :as hiccup]]
-  (cond
-    (= :<> tag) (map fake-hiccup->dom children)
-    (fn? tag) (component->html hiccup)
-    :else (create-dom-node hiccup)))
-
-(defn fake-hiccup->dom [hiccup]
-  (cond (vector? hiccup) (vector->html hiccup)
-        (seq? hiccup) (map fake-hiccup->dom hiccup)
-        (string? hiccup) hiccup
-        (nil? hiccup) nil
-        :else (pr-str hiccup)))
 
 (defn create-drag-node [dnd group node]
   (if-let [hiccup-fn (get-in @dnd [:groups group :hiccup])]
@@ -304,7 +238,7 @@
   dnd)
 
 (defn drag-fake-hiccup-fn [dnd group fake-hiccup-fn]
-  (swap! dnd assoc-in [:groups group :hiccup] (fn [node] (fake-hiccup->dom (fake-hiccup-fn node))))
+  (swap! dnd assoc-in [:groups group :hiccup] (fn [node] (fake-hiccup/->dom (fake-hiccup-fn node))))
   dnd)
 
 (defn- add-group-listener! [dnd group type listener]
