@@ -157,10 +157,16 @@
     (-> hiccup hiccup-options clj->js)
     (->> hiccup child-elements (map fake-hiccup->dom) flatten clj->js)))
 
+(defn component->html [[tag & children]]
+  (let [component (apply tag children)]
+    (if (fn? component)
+      (fake-hiccup->dom (vec (concat [component] children)))
+      (fake-hiccup->dom component))))
+
 (defn vector->html [[tag & children :as hiccup]]
   (cond
     (= :<> tag) (map fake-hiccup->dom children)
-    (fn? tag) (fake-hiccup->dom (apply tag children))
+    (fn? tag) (component->html hiccup)
     :else (create-dom-node hiccup)))
 
 (defn fake-hiccup->dom [hiccup]

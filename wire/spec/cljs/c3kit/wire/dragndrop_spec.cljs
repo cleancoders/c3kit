@@ -4,13 +4,14 @@
                                         should-contain should-not-contain should should-not-have-invoked stub]]
                    [c3kit.wire.spec-helperc :refer [should-select should-not-select]])
   (:require
-   [c3kit.apron.log :as log]
-   [c3kit.wire.dragndrop2 :as sut]
-   [c3kit.wire.js :as wjs]
-   [c3kit.wire.spec-helper :as helper]
-   [goog.dom :as dom]
-   [reagent.core :as reagent]
-   [speclj.stub :as stub]))
+    [c3kit.apron.log :as log]
+    [c3kit.wire.dragndrop2 :as sut]
+    [c3kit.wire.js :as wjs]
+    [c3kit.wire.spec-helper :as helper]
+    [goog.dom :as dom]
+    [reagent.core :as reagent]
+    [speclj.stub :as stub]
+    [c3kit.apron.corec :as ccc]))
 
 (def blank-dnd (sut/context))
 (def pets ["brusly" "cheddar"])
@@ -83,6 +84,14 @@
     (it "renders vector function with no arguments"
       (should= (get-outer-html (test-content))
                (get-outer-html [test-content])))
+    (it "renders function component no arguments"
+      (should= (get-outer-html (test-content))
+               (get-outer-html [(fn [] test-content)])))
+    (it "renders function component two arguments"
+      (let [component (fn [_ _]
+                        (fn [name age] [:div [:p name] [:p age]]))]
+        (should= (get-outer-html [:div [:p "Lucky"] [:p 3]])
+                 (get-outer-html [component "Lucky" 3]))))
     (it "renders vector function with one argument"
       (should= (get-outer-html [:h1 "Chocolate"])
                (get-outer-html [(fn [a] [:h1 a]) "Chocolate"])))
