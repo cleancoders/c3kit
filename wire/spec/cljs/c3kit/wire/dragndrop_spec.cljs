@@ -10,8 +10,7 @@
     [c3kit.wire.spec-helper :as helper]
     [goog.dom :as dom]
     [reagent.core :as reagent]
-    [speclj.stub :as stub]
-    [c3kit.apron.corec :as ccc]))
+    [speclj.stub :as stub]))
 
 (def blank-dnd (sut/context))
 (def pets ["brusly" "cheddar"])
