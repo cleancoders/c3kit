@@ -16,10 +16,10 @@
   :profiles {:dev {:resource-paths ["dev"]
                    :dependencies [
                                   [org.clojure/clojurescript "1.10.764"]
-                                  [speclj "3.3.2"]
+                                  [speclj "3.4.1"]
                                   ]}}
 
-  :plugins [[speclj "3.3.2"]]
+  :plugins [[speclj "3.4.1"]]
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]

@@ -1,5 +1,4 @@
 (ns c3kit.wire.dragndrop2
-  (:import [goog History])
   (:require
     [c3kit.apron.corec :as ccc]
     [c3kit.apron.log :as log]
@@ -7,12 +6,14 @@
     [c3kit.wire.fake-hiccup :as fake-hiccup]
     [c3kit.wire.js :as wjs]
     [goog.events.EventHandler]
-    [goog.fx.DragDropGroup]
-    [goog.fx.DragDrop]))
+    [goog.fx.DragDrop]
+    [goog.fx.DragDropGroup])
+  (:import (goog History)))
 
 (def drag-threshold 5)
 
-(def dnd-structure
+(comment
+  ;; an example of the dnd-structure
   {:groups      {:group-key-1 {:members    {:member-key-1 {:node                 "dom node"
                                                            :draggable-mousedown  "mousedown listener to start drag"
                                                            :droppable-mouseenter "mouseenter listener to dragover"
@@ -40,7 +41,8 @@
                  :document     "document dom node"
                  :end-listener "a js event handler"
                  :drop-target  ["group key" "member key"]
-                 }})
+                 }}
+  )
 
 (defn get-group [dnd group]
   (if-let [group (get-in @dnd [:groups] group)]
@@ -113,8 +115,8 @@
 (defn create-drag-node [dnd group node]
   (if-let [hiccup-fn (get-in @dnd [:groups group :hiccup])]
     (let [drag-node (hiccup-fn node)
-          classes (->> (clojure.string/split (wjs/node-classes node) #" ")
-                       (remove #(clojure.string/blank? %)))]
+          classes   (->> (clojure.string/split (wjs/node-classes node) #" ")
+                         (remove #(clojure.string/blank? %)))]
       (doseq [class classes] (when class (wjs/node-add-class drag-node class)))
       drag-node)
     (wjs/node-clone node true)))
@@ -122,26 +124,26 @@
 (defn start-drag [dnd group member node js-event]
   (when (dispatch-event dnd group :drag-start (drag-event group member node js-event))
     (let [drag-handler (partial handle-drag dnd)
-          end-handler (partial end-drag dnd)
-          doc (wjs/document node)
-          drag-class (get-in @dnd [:groups group :drag-class])
-          drag-node (create-drag-node dnd group node)
-          drag-style (wjs/node-style drag-node)
-          dnd-state @dnd
-          scroll-x (.-scrollX js/window)
-          scroll-y (.-scrollY js/window)
+          end-handler  (partial end-drag dnd)
+          doc          (wjs/document node)
+          drag-class   (get-in @dnd [:groups group :drag-class])
+          drag-node    (create-drag-node dnd group node)
+          drag-style   (wjs/node-style drag-node)
+          dnd-state    @dnd
+          scroll-x     (.-scrollX js/window)
+          scroll-y     (.-scrollY js/window)
           [start-x start-y] (-> dnd-state :maybe-drag :start-position)
           [node-x node-y _ _] (wjs/node-bounds node)
-          offset [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
-          active-drag {:group         group
-                       :member        member
-                       :node          node
-                       :drag-node     drag-node
-                       :offset        offset
-                       :document      doc
-                       :drag-listener drag-handler
-                       :end-listener  end-handler
-                       }]
+          offset       [(- start-x node-x scroll-x) (- start-y node-y scroll-y)]
+          active-drag  {:group         group
+                        :member        member
+                        :node          node
+                        :drag-node     drag-node
+                        :offset        offset
+                        :document      doc
+                        :drag-listener drag-handler
+                        :end-listener  end-handler
+                        }]
 
       (append-dragger doc drag-node drag-class drag-style)
       (add-doc-listeners doc drag-handler end-handler)
@@ -161,9 +163,9 @@
 (defn mouse-move [dnd group member node js-event]
   (let [[start-x start-y] (-> @dnd :maybe-drag :start-position)
         [x y] (wjs/e-coordinates js-event)
-        distance (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
+        distance         (+ (js/Math.abs (- x start-x)) (js/Math.abs (- y start-y)))
         above-threshold? (> distance drag-threshold)
-        mouse-out? (and (= "mouseout" (wjs/e-type js-event)) (= (-> @dnd :maybe-drag :node) (wjs/e-target js-event)))]
+        mouse-out?       (and (= "mouseout" (wjs/e-type js-event)) (= (-> @dnd :maybe-drag :node) (wjs/e-target js-event)))]
     (when (or above-threshold? mouse-out?)
       (do (start-drag dnd group member node js-event)
           (end-maybe-drag dnd nil))
@@ -171,9 +173,9 @@
 
 (defn draggable-mouse-down [dnd group member node js-event]
   (when (wjs/e-left-click? js-event)
-    (let [listener (partial mouse-move dnd group member node)
-          doc-listener (partial end-maybe-drag dnd)
-          doc (wjs/document node)
+    (let [listener       (partial mouse-move dnd group member node)
+          doc-listener   (partial end-maybe-drag dnd)
+          doc            (wjs/document node)
           start-position (wjs/e-coordinates js-event)]
       (wjs/add-listener node "mousemove" listener)
       (wjs/add-listener node "mouseout" listener)

@@ -13,9 +13,9 @@
                  ]
 
   :profiles {:dev {:resource-paths ["resources"]
-                   :dependencies   [[speclj "3.3.2"]]}}
+                   :dependencies   [[speclj "3.4.1"]]}}
 
-  :plugins [[speclj "3.3.2"]]
+  :plugins [[speclj "3.4.1"]]
 
   :source-paths ["src"]
   :test-paths ["spec"]

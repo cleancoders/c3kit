@@ -16,10 +16,10 @@
                                     [com.cleancoders.c3kit/scaffold "1.0.7" :exclusions [[com.google.code.findbugs/jsr305]]]
                                     [com.datomic/datomic-free "0.9.5697"]
                                     [com.google.guava/guava "25.1-jre" :exclusions [com.google.errorprone/error_prone_annotations]]
-                                    [speclj "3.3.2"]
+                                    [speclj "3.4.1"]
                                     ]}}
 
-  :plugins [[speclj "3.3.2"]]
+  :plugins [[speclj "3.4.1"]]
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :test-paths ["spec/clj" "spec/cljc" "spec/cljs"]
