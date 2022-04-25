@@ -152,7 +152,7 @@
         (should= '[[?e :foo/bar ?bar]
                    [(> ?bar 123)]]
                  (db/where-clause :foo/bar ['> 123]))))
-    (it ">"
+    (it "<"
       (with-redefs [gensym (fn [prefix] (symbol prefix))]
         (should= '[[?e :foo/bar ?bar]
                    [(< ?bar 123)]]
