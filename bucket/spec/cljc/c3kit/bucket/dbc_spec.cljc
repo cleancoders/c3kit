@@ -2,7 +2,8 @@
   (:require
     [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it xit should= should-contain
                                                       should-not-contain should-throw should-be-a with
-                                                      should-not= before should should-not should-not-throw]]
+                                                      should-not= before should should-not should-not-throw
+                                                      focus-it]]
     [c3kit.bucket.db :as db]
     [c3kit.apron.log :as log]
     [c3kit.apron.time :as time :refer [seconds ago from-now]]
@@ -187,7 +188,9 @@
             b3 (db/tx :kind :bibelot :name "Ant" :color "blue" :size 1)]
         (should= [b1 b2 b3] (db/find-by :bibelot :name ["Bee" "Ant"]))
         (should= [b3] (db/find-by :bibelot :name ["BLAH" "Ant"]))
-        (should= [] (db/find-by :bibelot :name ["BLAH" "ARG"]))))
+        (should= [] (db/find-by :bibelot :name ["BLAH" "ARG"]))
+        (should= [] (db/find-by :bibelot :name []))
+        (should= [] (db/find-by :bibelot :name [] :size 1))))
 
     (it "or multi-value"
       (let [d1 (db/tx {:kind :doodad :names ["foo" "bar"] :numbers [8 42]})
@@ -263,7 +266,9 @@
       (let [bibby (db/tx {:kind :bibelot :name "bibby"})
             saved (db/tx :kind :thingy :foo "paul" :bar (:id bibby) :fizz 2 :bang :paul)]
         (should= 1 (db/count-by :thingy :foo "paul" :bar (:id bibby) :fizz 2 :bang :paul))
-        (should= 0 (db/count-by :thingy :foo "ringo" :bar (:id bibby) :fizz 2 :bang :paul))))
+        (should= 0 (db/count-by :thingy :foo "ringo" :bar (:id bibby) :fizz 2 :bang :paul))
+        (should= 0 (db/count-by :thingy :foo []))
+        (should= 0 (db/count-by :thingy :foo [] :fizz 2))))
     )
 
   (context "find-all"
