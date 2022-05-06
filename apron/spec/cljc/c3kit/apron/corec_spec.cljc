@@ -32,7 +32,11 @@
     (it "two truthy and one falsy argument" (should= true (ccc/nand 1 2 false)))
     (it "truthy then falsy argument" (should= true (ccc/nand 1 nil)))
     (it "falsy then truthy argument" (should= true (ccc/nand nil 1)))
-    (it "lazy evaluation on the first falsy value" (should= true (ccc/nand nil (/ 1 0)))))
+    (it "lazy evaluation on the first falsy value" (should= true (ccc/nand nil (/ 1 0))))
+    (it "evaluates each form exactly once"
+      (let [flag (atom false)]
+        (should= false (ccc/nand (swap! flag not) true))
+        (should= true @flag))))
 
   (context "nor"
     (it "no arguments" (should= true (ccc/nor)))
@@ -45,7 +49,11 @@
     (it "two truthy and one falsy argument" (should= false (ccc/nor 1 2 false)))
     (it "truthy then falsy argument" (should= false (ccc/nor 1 nil)))
     (it "falsy then truthy argument" (should= false (ccc/nor nil 1)))
-    (it "lazy evaluation on the first truthy value" (should= false (ccc/nor 1 (/ 1 0)))))
+    (it "lazy evaluation on the first truthy value" (should= false (ccc/nor 1 (/ 1 0))))
+    (it "evaluates each form exactly once"
+      (let [flag (atom true)]
+        (should= true (ccc/nor (swap! flag not) nil))
+        (should= false @flag))))
 
   (context "xor"
     (it "no arguments" (should-be-nil (ccc/xor)))
@@ -60,7 +68,11 @@
     (it "truthy, falsy, then truthy arguments" (should-be-nil (ccc/xor 1 nil 2)))
     (it "lazy evaluation on the second truthy value" (should-be-nil (ccc/xor 1 2 (/ 1 0))))
     (it "four arguments with one truthy value" (should= 4 (ccc/xor nil false nil 4)))
-    (it "four arguments with two truthy values" (should= nil (ccc/xor nil false 3 4))))
+    (it "four arguments with two truthy values" (should= nil (ccc/xor nil false 3 4)))
+    (it "evaluates each form exactly once"
+      (let [flag (atom 0)]
+        (should= 1 (ccc/xor (swap! flag inc) nil nil))
+        (should= 1 @flag))))
 
   (context "->options"
 

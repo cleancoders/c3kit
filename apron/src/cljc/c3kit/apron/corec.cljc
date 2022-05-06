@@ -16,16 +16,12 @@
    (defmacro nand
      "Same as (not (and ...))"
      ([] false)
-     ([x & next]
-      `(let [nand# ~x]
-         (if-not nand# true (nand ~@next))))))
+     ([x & next] `(if-not ~x true (nand ~@next)))))
 #?(:clj
    (defmacro nor
      "Same as (not (or ...))"
      ([] true)
-     ([x & next]
-      `(let [or# ~x]
-         (if or# false (nor ~@next))))))
+     ([x & next] `(if ~x false (nor ~@next)))))
 #?(:clj
    (defmacro xor
     "Evaluates expressions one at a time, from left to right.
@@ -36,9 +32,11 @@
      ([] nil)
      ([x] `(or ~x nil))
      ([x y & next]
-      `(if (and ~x ~y)
-         nil
-         (xor (or ~x ~y) ~@next)))))
+      `(let [x# ~x
+             y# ~y]
+         (if (and x# y#)
+           nil
+           (xor (or x# y#) ~@next))))))
 
 (defn new-uuid []
   #?(:clj  (UUID/randomUUID)
