@@ -2,7 +2,7 @@
   "Common core code.  This file should have minimal dependencies.
   Clients should be able to safely :refer :all from this namespace."
   #?(:clj (:import (java.util UUID)))
-  #?(:cljs (:require-macros [c3kit.apron.corec :refer [for-all]]))
+  #?(:cljs (:require-macros [c3kit.apron.corec :refer [for-all nand nor xor]]))
   #?(:cljs (:require
     ;#?(:clj [hashids.core :as hashid])
     ;#?(:cljs [cljsjs.hashids])
@@ -12,6 +12,33 @@
 
 #?(:clj (defmacro for-all [bindings body]
           `(doall (for ~bindings ~body))))
+#?(:clj
+   (defmacro nand
+     "Same as (not (and ...))"
+     ([] false)
+     ([x & next]
+      `(let [nand# ~x]
+         (if-not nand# true (nand ~@next))))))
+#?(:clj
+   (defmacro nor
+     "Same as (not (or ...))"
+     ([] true)
+     ([x & next]
+      `(let [or# ~x]
+         (if or# false (nor ~@next))))))
+#?(:clj
+   (defmacro xor
+    "Evaluates expressions one at a time, from left to right.
+     If a second form evaluates to logical true, xor returns nil
+     and doesn't evaluate any of the other expressions, otherwise
+     it returns the value of the first logical true expression.
+     If there are no truthy expressions, xor returns nil."
+     ([] nil)
+     ([x] `(or ~x nil))
+     ([x y & next]
+      `(if (and ~x ~y)
+         nil
+         (xor (or ~x ~y) ~@next)))))
 
 (defn new-uuid []
   #?(:clj  (UUID/randomUUID)
@@ -54,6 +81,20 @@
 (defn removev= [col item]
   "Using =, returns vector without item"
   (removev #(= % item) col))
+
+(def ffilter
+  "Same as (first (filter ...))"
+  (comp first filter))
+
+(defn rsort
+  "Same as sort, but reversed"
+  ([coll] (rsort compare coll))
+  ([comp coll] (sort (fn [x y] (comp y x)) coll)))
+
+(defn rsort-by
+  "Same as sort-by, but reversed"
+  ([keyfn coll] (rsort-by keyfn compare coll))
+  ([keyfn comp coll] (sort-by keyfn (fn [x y] (comp y x)) coll)))
 
 (defn ->inspect
   "Insert in threading macro to print the value."

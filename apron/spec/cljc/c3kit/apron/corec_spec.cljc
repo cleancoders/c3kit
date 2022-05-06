@@ -1,7 +1,7 @@
 (ns c3kit.apron.corec-spec
   (:require
     [c3kit.apron.corec :as ccc]
-    [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it should= should-contain should-throw]]))
+    [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it should= should-be-nil]]))
 
 (describe "Core Common"
 
@@ -20,6 +20,47 @@
   ;    (should= "jREgpG5GpaB" (ccc/id->hash 999999999999999))
   ;    (should= 999999999999999 (ccc/hash->id "jREgpG5GpaB")))
 
+
+  (context "nand"
+    (it "no arguments" (should= false (ccc/nand)))
+    (it "one falsy argument" (should= true (ccc/nand nil)))
+    (it "one truthy argument" (should= false (ccc/nand 1)))
+    (it "two truthy arguments" (should= false (ccc/nand 1 2)))
+    (it "two falsy arguments" (should= true (ccc/nand false nil)))
+    (it "three truthy arguments" (should= false (ccc/nand 1 2 3)))
+    (it "three falsy arguments" (should= true (ccc/nand false nil (not true))))
+    (it "two truthy and one falsy argument" (should= true (ccc/nand 1 2 false)))
+    (it "truthy then falsy argument" (should= true (ccc/nand 1 nil)))
+    (it "falsy then truthy argument" (should= true (ccc/nand nil 1)))
+    (it "lazy evaluation on the first falsy value" (should= true (ccc/nand nil (/ 1 0)))))
+
+  (context "nor"
+    (it "no arguments" (should= true (ccc/nor)))
+    (it "one falsy argument" (should= true (ccc/nor nil)))
+    (it "one truthy argument" (should= false (ccc/nor 1)))
+    (it "two truthy arguments" (should= false (ccc/nor 1 2)))
+    (it "two falsy arguments" (should= true (ccc/nor false nil)))
+    (it "three truthy arguments" (should= false (ccc/nor 1 2 3)))
+    (it "three falsy arguments" (should= true (ccc/nor false nil (not true))))
+    (it "two truthy and one falsy argument" (should= false (ccc/nor 1 2 false)))
+    (it "truthy then falsy argument" (should= false (ccc/nor 1 nil)))
+    (it "falsy then truthy argument" (should= false (ccc/nor nil 1)))
+    (it "lazy evaluation on the first truthy value" (should= false (ccc/nor 1 (/ 1 0)))))
+
+  (context "xor"
+    (it "no arguments" (should-be-nil (ccc/xor)))
+    (it "one nil argument" (should-be-nil (ccc/xor nil)))
+    (it "one false argument" (should-be-nil (ccc/xor false)))
+    (it "one truthy argument" (should= 1 (ccc/xor 1)))
+    (it "nil then false arguments" (should-be-nil (ccc/xor nil false)))
+    (it "false then nil arguments" (should-be-nil (ccc/xor false nil)))
+    (it "two truthy arguments" (should-be-nil (ccc/xor true 1)))
+    (it "falsy then truthy arguments" (should= 1 (ccc/xor false 1)))
+    (it "truthy then falsy arguments" (should= 1 (ccc/xor 1 false)))
+    (it "truthy, falsy, then truthy arguments" (should-be-nil (ccc/xor 1 nil 2)))
+    (it "lazy evaluation on the second truthy value" (should-be-nil (ccc/xor 1 2 (/ 1 0))))
+    (it "four arguments with one truthy value" (should= 4 (ccc/xor nil false nil 4)))
+    (it "four arguments with two truthy values" (should= nil (ccc/xor nil false 3 4))))
 
   (context "->options"
 
@@ -64,6 +105,60 @@
     (let [result (ccc/removev= (list 1 2 3 4) 2)]
       (should= [1 3 4] result)
       (should= true (vector? result))))
+
+  (context "ffilter"
+    (for [coll [nil [] [nil]]]
+      (it (str "is nil when " (pr-str coll))
+        (should-be-nil (ccc/ffilter any? coll))))
+    (it "single-element collection"
+      (should= 1 (ccc/ffilter any? [1])))
+    (it "two-element collection"
+      (should= 2 (ccc/ffilter any? [2 1])))
+    (it "first item of filtered result"
+      (should= :a (ccc/ffilter identity [nil false :a :b])))
+    (it "first item of no results"
+      (should-be-nil (ccc/ffilter number? [nil false :a :b]))))
+
+  (context "rsort"
+    (it "a nil collection"
+      (should= [] (ccc/rsort nil)))
+    (it "an empty collection"
+      (should= [] (ccc/rsort [])))
+    (it "a single-element collection"
+      (should= [1] (ccc/rsort [1])))
+    (it "an already reverse-sorted collection"
+      (should= [5 4 3 2 1] (ccc/rsort [5 4 3 2 1])))
+    (it "a regular-sorted collection"
+      (should= [5 4 3 2 1] (ccc/rsort [1 2 3 4 5])))
+    (it "a shuffled collection"
+      (should= [5 4 3 2 1] (ccc/rsort [4 5 1 3 2])))
+    (it "by custom compare function"
+      (should= [[1 5] [2 4] [3 3] [4 2] [5 1]]
+               (ccc/rsort
+                 (fn [x y] (compare (second x) (second y)))
+                 [[5 1] [4 2] [3 3] [2 4] [1 5]]))))
+
+  (context "rsort"
+    (it "a nil collection"
+      (should= [] (ccc/rsort-by :x nil)))
+    (it "an empty collection"
+      (should= [] (ccc/rsort-by :x [])))
+    (it "a single-element collection"
+      (should= [{:x 1}] (ccc/rsort-by :x [{:x 1}])))
+    (it "an already reverse-sorted collection"
+      (let [coll [{:x 5} {:x 4} {:x 3} {:x 2} {:x 1}]]
+        (should= (reverse (sort-by :x coll)) (ccc/rsort-by :x coll))))
+    (it "a regular-sorted collection"
+      (let [coll [{:x 1} {:x 2} {:x 3} {:x 4} {:x 5}]]
+        (should= (reverse (sort-by :x coll)) (ccc/rsort-by :x coll))))
+    (it "a shuffled collection"
+      (let [coll [{:x 4} {:x 5} {:x 1} {:x 3} {:x 2}]]
+        (should= (reverse (sort-by :x coll)) (ccc/rsort-by :x coll))))
+    (it "by custom compare function"
+      (let [coll [{:a [5 1]} {:a [4 2]} {:a [3 3]} {:a [2 4]} {:a [1 5]}]
+            compare-fn (fn [x y] (compare (second x) (second y)))]
+        (should= (reverse (sort-by :a compare-fn coll))
+                 (ccc/rsort-by :a compare-fn coll)))))
 
   (it "formats"
     (should= "Number 9" (ccc/formats "Number %s" 9)))
