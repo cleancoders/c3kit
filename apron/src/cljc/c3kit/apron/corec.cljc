@@ -80,9 +80,10 @@
   "Using =, returns vector without item"
   (removev #(= % item) col))
 
-(def ffilter
-  "Same as (first (filter ...))"
-  (comp first filter))
+(defn ffilter
+  "Same as (first (filter ...)), but faster!"
+  [pred coll]
+  (reduce (fn [_ b] (when (pred b) (reduced b))) nil coll))
 
 (defn rsort
   "Same as sort, but reversed"
