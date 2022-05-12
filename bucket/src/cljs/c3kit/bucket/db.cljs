@@ -51,11 +51,18 @@
 
 (defn- multi? [ev] (or (sequential? ev) (set? ev)))
 
-(defn normal-tester [f v]
+(defn- normal-tester [f v]
   (fn [ev]
     (if (multi? ev)
       (some #(f % v) ev)
       (f ev v))))
+
+(defn- or-tester [values]
+  (let [v-set (set values)]
+    (fn [ev]
+      (if (multi? ev)
+        (some v-set ev)
+        (v-set ev)))))
 
 (defmulti -tester first)
 (defmethod -tester 'not [[_ v]]
@@ -65,12 +72,11 @@
       (not= v ev))))
 (defmethod -tester '> [[_ v]] (normal-tester > v))
 (defmethod -tester '< [[_ v]] (normal-tester < v))
-(defmethod -tester :default [values]
-  (let [v-set (set values)]
-    (fn [ev]
-      (if (multi? ev)
-        (some v-set ev)
-        (v-set ev)))))
+(defmethod -tester '>= [[_ v]] (normal-tester >= v))
+(defmethod -tester '<= [[_ v]] (normal-tester <= v))
+(defmethod -tester 'or [values] (or-tester (rest values)))
+(defmethod -tester :default [values] (or-tester values))
+
 (defn- eq-tester [v] (normal-tester = v))
 
 (defn kv->tester [[k v]]

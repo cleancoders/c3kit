@@ -192,6 +192,16 @@
         (should= [] (db/find-by :bibelot :name []))
         (should= [] (db/find-by :bibelot :name [] :size 1))))
 
+    (it "explicit or"
+      (let [b1 (db/tx :kind :bibelot :name "Bee" :color "red" :size 1)
+            b2 (db/tx :kind :bibelot :name "Bee" :color "blue" :size 2)
+            b3 (db/tx :kind :bibelot :name "Ant" :color "blue" :size 1)]
+        (should= [b1 b2 b3] (db/find-by :bibelot :name ["Bee" "Ant"]))
+        (should= [b3] (db/find-by :bibelot :name ['or "BLAH" "Ant"]))
+        (should= [] (db/find-by :bibelot :name ['or "BLAH" "ARG"]))
+        (should= [] (db/find-by :bibelot :name ['or ]))
+        (should= [] (db/find-by :bibelot :name ['or ] :size 1))))
+
     (it "or multi-value"
       (let [d1 (db/tx {:kind :doodad :names ["foo" "bar"] :numbers [8 42]})
             d2 (db/tx {:kind :doodad :names ["foo" "bang"] :numbers [8 43]})]
@@ -215,21 +225,31 @@
           (should= [b1 b2 b3] (db/find-by :bibelot :size ['< 4]))
           (should= [b1 b2] (db/find-by :bibelot :size ['< 3]))
           (should= [b1] (db/find-by :bibelot :size ['< 2]))
-          (should= [] (db/find-by :bibelot :size ['< 1]))))
+          (should= [] (db/find-by :bibelot :size ['< 1]))
+          (should= [b2 b3] (db/find-by :bibelot :size ['>= 2]))
+          (should= [b1 b2] (db/find-by :bibelot :size ['<= 2]))))
 
       (it "string"
         (let [b1 (db/tx :kind :bibelot :name "foo")]
           (should= [b1] (db/find-by :bibelot :name ['> "a"]))
           (should= [] (db/find-by :bibelot :name ['> "foo"]))
           (should= [] (db/find-by :bibelot :name ['< "foo"]))
-          (should= [b1] (db/find-by :bibelot :name ['< "z"]))))
+          (should= [b1] (db/find-by :bibelot :name ['< "z"]))
+          (should= [b1] (db/find-by :bibelot :name ['<= "foo"]))
+          (should= [b1] (db/find-by :bibelot :name ['>= "foo"]))
+          (should= [] (db/find-by :bibelot :name ['<= "fom"]))
+          (should= [] (db/find-by :bibelot :name ['>= "fop"]))))
 
       (it "ref"
         (let [b1 (db/tx :kind :thingy :bar 123)]
           (should= [b1] (db/find-by :thingy :bar ['> 0]))
           (should= [] (db/find-by :thingy :bar ['> 123]))
           (should= [] (db/find-by :thingy :bar ['< 123]))
-          (should= [b1] (db/find-by :thingy :bar ['< 124]))))
+          (should= [b1] (db/find-by :thingy :bar ['< 124]))
+          (should= [b1] (db/find-by :thingy :bar ['>= 123]))
+          (should= [b1] (db/find-by :thingy :bar ['<= 123]))
+          (should= [] (db/find-by :thingy :bar ['>= 124]))
+          (should= [] (db/find-by :thingy :bar ['<= 122]))))
 
       (it "date"
         (let [now (time/now)
@@ -237,7 +257,11 @@
           (should= [b1] (db/find-by :tempy :when ['> (-> 1 seconds ago)]))
           (should= [] (db/find-by :tempy :when ['> now]))
           (should= [] (db/find-by :tempy :when ['< now]))
-          (should= [b1] (db/find-by :tempy :when ['< (-> 1 seconds from-now)]))))
+          (should= [b1] (db/find-by :tempy :when ['< (-> 1 seconds from-now)]))
+          (should= [b1] (db/find-by :tempy :when ['<= now]))
+          (should= [b1] (db/find-by :tempy :when ['>= now]))
+          (should= [] (db/find-by :tempy :when ['<= (-> 1 seconds ago)]))
+          (should= [] (db/find-by :tempy :when ['>= (-> 1 seconds from-now)]))))
       )
     )
 

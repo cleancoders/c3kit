@@ -250,18 +250,24 @@
   (if (nil? value)
     (list ['?e attr])
     (list (list 'not ['?e attr value]))))
+
 (defn- simple-where-fn [attr value f-sym]
   (let [attr-sym (gensym (str "?" (name attr)))]
     (list ['?e attr attr-sym]
           [(list f-sym attr-sym value)])))
+
 (defmethod seq-where-clause '> [attr [_ value]] (simple-where-fn attr value '>))
 (defmethod seq-where-clause '< [attr [_ value]] (simple-where-fn attr value '<))
-(defmethod seq-where-clause :default [attr values]
-  ;(list (cons 'or (mapcat #(where-clause attr %) values)))
+(defmethod seq-where-clause '>= [attr [_ value]] (simple-where-fn attr value '>=))
+(defmethod seq-where-clause '<= [attr [_ value]] (simple-where-fn attr value '<=))
+
+(defn- or-where-clause [attr values]
   (if (seq values)
     (list (cons 'or (mapcat #(where-clause attr %) values)))
     [nil]))
 
+(defmethod seq-where-clause 'or [attr values] (or-where-clause attr (rest values)))
+(defmethod seq-where-clause :default [attr values] (or-where-clause attr values))
 
 (defn where-clause [attr value]
   (cond (nil? value) (list [(list 'missing? '$ '?e attr)])
