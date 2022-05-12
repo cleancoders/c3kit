@@ -1,13 +1,12 @@
-(defproject com.cleancoders.c3kit/scaffold "1.0.7"
+(defproject com.cleancoders.c3kit/scaffold "1.0.8"
   :description "Clean Coders Clojure (C3) Kit - Scaffold: Build tools."
   :url "https://cleancoders.com"
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.6"]
-                 [com.taoensso/timbre "4.11.0-alpha1"]
+                 [com.cleancoders.c3kit/apron "1.0.7"]
                  [garden "1.3.10"]
-                 [org.clojure/clojure "1.10.3"]
+                 [org.clojure/clojure "1.11.1"]
                  [org.clojure/clojurescript "1.10.764" :exclusions [org.clojure/tools.reader com.google.code.findbugs/jsr305]]
                  [org.clojure/tools.namespace "1.2.0"]
                  ]

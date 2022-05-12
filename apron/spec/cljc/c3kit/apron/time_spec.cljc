@@ -76,7 +76,8 @@
     (should= true (before? (-> 1 seconds ago) (now)))
     (should= true (before? (-> 2 seconds ago) (-> 1 seconds ago)))
     (should= true (after? (-> 1 seconds from-now) (now)))
-    (should= true (after? (-> 2 seconds from-now) (-> 1 seconds from-now))))
+    (should= true (after? (-> 2 seconds from-now) (-> 1 seconds from-now)))
+    (should= true (after? (-> 0.5 seconds from-now) (now))))
 
   (it "creates dates relative to now in minute increments"
     (should= true (before? (-> 1 minutes ago) (now)))
@@ -84,7 +85,8 @@
     (should= false (before? (-> 1 minutes ago) (-> 61 seconds ago)))
     (should= true (after? (-> 1 minutes from-now) (now)))
     (should= true (after? (-> 1 minutes from-now) (-> 59 seconds from-now)))
-    (should= false (after? (-> 1 minutes from-now) (-> 61 seconds from-now))))
+    (should= false (after? (-> 1 minutes from-now) (-> 61 seconds from-now)))
+    (should= true (after? (-> 0.5 minutes from-now) (now))))
 
   (it "creates dates relative to now in hour increments"
     (should= true (before? (-> 1 hours ago) (now)))
@@ -92,7 +94,8 @@
     (should= false (before? (-> 1 hours ago) (-> 61 minutes ago)))
     (should= true (after? (-> 1 hours from-now) (now)))
     (should= true (after? (-> 1 hours from-now) (-> 59 minutes from-now)))
-    (should= false (after? (-> 1 hours from-now) (-> 61 minutes from-now))))
+    (should= false (after? (-> 1 hours from-now) (-> 61 minutes from-now)))
+    (should= true (after? (-> 0.5 hours from-now) (now))))
 
   (it "creates dates relative to now in day increments"
     (should= true (before? (-> 1 days ago) (now)))
@@ -100,7 +103,8 @@
     (should= false (before? (-> 1 days ago) (-> 25 hours ago)))
     (should= true (after? (-> 1 days from-now) (now)))
     (should= true (after? (-> 1 days from-now) (-> 23 hours from-now)))
-    (should= false (after? (-> 1 days from-now) (-> 25 hours from-now))))
+    (should= false (after? (-> 1 days from-now) (-> 25 hours from-now)))
+    (should= true (after? (-> 0.5 days from-now) (now))))
 
   (it "create dates relative to other dates by month increment"
     (should= "20110201" (unparse :ymd (after (local 2011 1 1) (months 1))))
@@ -120,7 +124,13 @@
     (should= false (after? (-> 1 years from-now) (-> 13 months from-now)))
     (should= true (before? (-> 1 years ago) (-> 11 months ago)))
     (should= false (before? (-> 1 years ago) (-> 13 months ago))))
-  ;
+
+  (it "month and year units are rounded"
+    (should= [:months 1] (months 0.5))
+    (should= [:months 0] (months 0.4))
+    (should= [:years 1] (years 0.5))
+    (should= [:years 0] (years 0.4)))
+
   (it "parses and formats dates in HTTP format"
     (let [date (parse :http "Sun, 06 Nov 1994 08:49:37 GMT")]
       (should= true (after? date (local 1994 11 5)))

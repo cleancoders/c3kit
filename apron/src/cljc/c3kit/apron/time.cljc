@@ -13,27 +13,27 @@
 
 (defn seconds
 	"Converts seconds to milliseconds"
-	[n] (* n 1000))
+	[n] (Math/round (double (* n 1000))))
 
 (defn minutes
 	"Converts minutes to milliseconds"
-	[n] (* n 60000))
+	[n] (Math/round (double (* n 60000))))
 
 (defn hours
 	"Converts hours to milliseconds"
-	[n] (* n 3600000))
+	[n] (Math/round (double (* n 3600000))))
 
 (defn days
 	"Converts days to milliseconds"
-	[n] (* n 86400000))
+	[n] (Math/round (double (* n 86400000))))
 
 (defn months
 	"Converts a number into a format that the Calendar object understands to be an amount of months"
-	[n] [:months n])
+	[n] [:months (if (float? n) (Math/round n) n)])
 
 (defn years
 	"Converts a number into a format that the Calendar object understands to be an amount of years"
-	[n] [:years n])
+	[n] [:years (if (float? n) (Math/round n) n)])
 
 (defn now
 	"Returns a java.util.Date or js/Date object that represents the current date and time in UTC"
@@ -151,8 +151,8 @@
 	modify time)."
 	[time bit direction]
 	(cond
-		(number? bit) #?(:clj  (Date. (direction (.getTime time) (int bit)))
-										 :cljs (js/Date. (direction (.getTime time) (int bit))))
+		(number? bit) #?(:clj  (Date. (direction (.getTime time) (long bit)))
+										 :cljs (js/Date. (direction (.getTime time) (long bit))))
 		(vector? bit) (mod-time-by-units time bit direction)))
 
 (defn before
