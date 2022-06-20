@@ -10,6 +10,7 @@
 (describe "util"
 
   (it "resolve-var"
+    (should-throw (deref (sut/resolve-var 'foo/bar)))
     (should= "Foo" (deref (sut/resolve-var 'c3kit.apron.util-spec/foo))))
 
   (context "var-value"

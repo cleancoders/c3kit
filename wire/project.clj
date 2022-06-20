@@ -5,8 +5,8 @@
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.7"]
-                 [com.cleancoders.c3kit/scaffold "1.0.8"]
+                 [com.cleancoders.c3kit/apron "1.0.8"]
+                 [com.cleancoders.c3kit/scaffold "1.0.9"]
                  [cljs-http/cljs-http "0.1.46"]
                  [http-kit "2.5.1"]
                  [org.clojure/clojure "1.11.1"]

@@ -44,12 +44,9 @@
   Throws an exception if the var doesnt exist.  Deref the var to get it's value.
   Use to decouple code; dynamically load code."
   [var-sym]
-  (let [ns-sym (symbol (namespace var-sym))
-        var-sym (symbol (name var-sym))]
-    (require ns-sym)
-    (if-let [var (ns-resolve (the-ns ns-sym) var-sym)]
-      var
-      (throw (Exception. (str "No such var " (name ns-sym) "/" (name var-sym)))))))
+  (if-let [var (requiring-resolve var-sym)]
+    var
+    (throw (Exception. (str "No such var " var-sym)))))
 
 (defn var-value
   "Using resolve-var, return the value of the var, or nil if it fails to resolve"
