@@ -1,8 +1,8 @@
 (ns c3kit.wire.dragndrop-spec
-  (:require-macros [speclj.core :refer [describe context it should-not-be-nil should=
-                                        should-not= should-have-invoked before with-stubs around
-                                        should-contain should-not-contain should-not-have-invoked stub]]
-                   [c3kit.wire.spec-helperc :refer [should-select]])
+  (:require-macros [c3kit.wire.spec-helperc :refer [should-select]]
+                   [speclj.core :refer [around before context describe it
+                                        should-contain should-have-invoked should-not-be-nil should-not-contain should-not-have-invoked
+                                        should-not= should= stub with-stubs]])
   (:require
     [c3kit.apron.log :as log]
     [c3kit.wire.dragndrop2 :as sut]
@@ -27,17 +27,17 @@
 (def dnd (sut/context))
 
 (defn refresh-dnd [] (-> (sut/context)
-                       (sut/add-group :pet)
-                       (sut/add-group :pet)
-                       (sut/drag-from-to :treat :pet)
-                       (sut/on-drag-start :treat drag-start)
-                       (sut/on-drop :pet drop!)
-                       (sut/on-drag-end :treat drag-end)
-                       (sut/on-drag-over :treat drag-over)
-                       (sut/on-drag-over :pet drag-over)
-                       (sut/on-drag-out :treat drag-out)
-                       (sut/on-drag-out :pet drag-out)
-                       (sut/set-drag-class :treat "drag-bone")))
+                         (sut/add-group :pet)
+                         (sut/add-group :pet)
+                         (sut/drag-from-to :treat :pet)
+                         (sut/on-drag-start :treat drag-start)
+                         (sut/on-drop :pet drop!)
+                         (sut/on-drag-end :treat drag-end)
+                         (sut/on-drag-over :treat drag-over)
+                         (sut/on-drag-over :pet drag-over)
+                         (sut/on-drag-out :treat drag-out)
+                         (sut/on-drag-out :pet drag-out)
+                         (sut/set-drag-class :treat "drag-bone")))
 
 (defn test-content []
   [:div
@@ -61,8 +61,8 @@
 
 (defn get-doc-listeners [kind]
   (->> (stub/invocations-of kind)
-    (filter #(= (wjs/document @bone-node) (first %)))
-    (map #(second %))))
+       (filter #(= (wjs/document @bone-node) (first %)))
+       (map #(second %))))
 
 (defn get-listeners [kind] (map #(second %) (stub/invocations-of kind)))
 
@@ -150,7 +150,7 @@
         )
       (context "dnd actions"
         (before (reset! draggers (get-in @dnd [:groups :treat :members]))
-          (reset! droppers (get-in @dnd [:groups :pet :members])))
+                (reset! droppers (get-in @dnd [:groups :pet :members])))
 
         (context "draggable-mouse-down"
           (it "right mouse-down"
@@ -192,14 +192,14 @@
                 (should-contain "mouseup" remove-listeners-after)))
 
             (it "movement below threshold"
-              (with-redefs [sut/start-drag (stub :start-drag)]
+              (with-redefs [sut/-start-drag (stub :start-drag)]
                 (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
                   (mousemove-handler (clj->js {:clientX 2 :clientY 2}))
                   (should-not-have-invoked :start-drag)
                   (should-contain :maybe-drag @dnd))))
 
             (it "valid movement - above threshold"
-              (with-redefs [sut/start-drag (stub :start-drag)]
+              (with-redefs [sut/-start-drag (stub :start-drag)]
                 (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
                   (mousemove-handler (clj->js {:clientX 10 :clientY 10}))
                   (should-have-invoked :start-drag)
@@ -207,7 +207,7 @@
                   (should-not-contain :maybe-drag @dnd))))
 
             (it "valid movement - mouseout"
-              (with-redefs [sut/start-drag (stub :start-drag)]
+              (with-redefs [sut/-start-drag (stub :start-drag)]
                 (let [mousemove-handler (get-in @dnd [:maybe-drag :move-listener])]
                   (mousemove-handler (clj->js {:type "mouseout" :target @bone-node}))
                   (should-have-invoked :nod)
@@ -216,14 +216,14 @@
             )
 
           (it "not start-drag with false dispatch event"
-            (with-redefs [sut/dispatch-event (stub :dispatch {:return false})]
-              (sut/start-drag dnd :treat "bone" @bone-node (clj->js {}))
+            (with-redefs [sut/-dispatch-event (stub :dispatch {:return false})]
+              (sut/-start-drag dnd :treat "bone" @bone-node (clj->js {}))
               (should-not-contain :active-drag @dnd)
               (should-not-contain "_dragndrop-drag-node_" (map #(helper/id %) (wjs/node-children (wjs/doc-body (wjs/document)))))))
 
           (it "start drag"
             (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-              (sut/start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+              (sut/-start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
               (let [doc-listeners (get-doc-listeners :add-listener)
                     node          (get-in @dnd [:active-drag :drag-node])
                     node-style    (wjs/node-style node)]
@@ -243,16 +243,16 @@
             (it "is cloned when no hiccup-fn"
               (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})
                             fake-hiccup/->dom (stub :fake-hiccup-dom)]
-                (sut/start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+                (sut/-start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
                 (let [node (get-in @dnd [:active-drag :drag-node])]
                   (should-not-have-invoked :fake-hiccup-dom)
-                (should-not= "give the dog a bone" (helper/html node)))))
+                  (should-not= "give the dog a bone" (helper/html node)))))
 
             (it "is created when hiccup-fn - when node has classes"
               (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
-              (sut/drag-fake-hiccup-fn dnd :treat fake-hiccup)
+                (sut/drag-fake-hiccup-fn dnd :treat fake-hiccup)
                 (should-not-be-nil (get-in @dnd [:groups :treat :hiccup]))
-                (sut/start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+                (sut/-start-drag dnd :treat "bone" @bone-node (clj->js {:target @bone-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
                 (let [node (get-in @dnd [:active-drag :drag-node])]
                   (should= "_dragndrop-drag-node_" (helper/id node))
                   (should-contain "_dragndrop-drag-node_" (map #(helper/id %) (wjs/node-children (wjs/doc-body (wjs/document)))))
@@ -264,7 +264,7 @@
               (with-redefs [wjs/node-bounds (stub :bounds {:return [10 10]})]
                 (sut/drag-fake-hiccup-fn dnd :treat fake-hiccup)
                 (should-not-be-nil (get-in @dnd [:groups :treat :hiccup]))
-                (sut/start-drag dnd :treat "catnip" @catnip-node (clj->js {:target @catnip-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
+                (sut/-start-drag dnd :treat "catnip" @catnip-node (clj->js {:target @catnip-node :clientX 0 :clientY 0 :scrollX 10 :scrollY 10}))
                 (let [node (get-in @dnd [:active-drag :drag-node])]
                   (should= "_dragndrop-drag-node_" (helper/id node))
                   (should-contain "_dragndrop-drag-node_" (map #(helper/id %) (wjs/node-children (wjs/doc-body (wjs/document)))))
@@ -336,4 +336,6 @@
   )
 
 ;; TODO - MDM: Add touch listeners so it works on mobile
-;; TODO - MDM: custom fake hiccup for dragged node - when drag starts use 'this' as fake-hiccup - look at original dnd for this
+;; TODO - MDM: Warning on configuring groups that don't exist
+;; TODO - MDM: Warning on register for duplicate keys (or missing keys on deregister)
+;; TODO - MDM: configurable drag-threshold
