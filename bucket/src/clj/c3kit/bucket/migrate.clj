@@ -31,7 +31,18 @@
             attr      (db/build-attribute kind (concat [attr-name type] spec))]
         (db/transact! [attr])))))
 
+(defn remove [attr]
+  (if-let [attr-id (schema-attr-id attr)]
+    (do
+      (log/info (str "\tremoving " attr " (" attr-id ")"))
+      (let [new-name (keyword "garbage" (str (namespace attr) "." (name attr) "_" (System/currentTimeMillis)))]
+        (db/transact! [{:db/id attr-id :db/ident new-name}])))
+    (log/warn "\tremove: MISSING " attr)))
+
 (defn rename [old new]
+  (when (attr-exists? new)
+    (log/warn "\trename: new name EXISTS " new)
+    (remove new))
   (if-let [old-id (schema-attr-id old)]
     (do (log/info (str "\trenaming " old " to " new))
         (db/transact! [{:db/id old-id :db/ident new}]))
@@ -55,14 +66,6 @@
     (doall (->> (retract-datoms attr)
                 (partition-all 100)
                 (map db/transact!)))))
-
-(defn remove [attr]
-  (if-let [attr-id (schema-attr-id attr)]
-    (do
-      (log/info (str "\tremoving " attr " (" attr-id ")"))
-      (let [new-name (keyword "garbage" (str (namespace attr) "." (name attr) "_" (System/currentTimeMillis)))]
-        (db/transact! [{:db/id attr-id :db/ident new-name}])))
-    (log/warn "\tremove: MISSING " attr)))
 
 (defn retract-remove [attr]
   (retract-attribute-values attr)
@@ -104,8 +107,8 @@
 (defn init-partition []
   (let [partition-name (db/partition-name)]
     (when-not (contains? (db/q db-partitions) [partition-name])
-     (log/info "\tadding partition:" partition-name)
-     (db/transact! (db/partition-schema)))))
+      (log/info "\tadding partition:" partition-name)
+      (db/transact! (db/partition-schema)))))
 
 (defn init []
   (app/start! [db/service])
