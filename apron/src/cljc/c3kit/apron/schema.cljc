@@ -456,7 +456,8 @@
       (error-or-result errors schema entity result))))
 
 (defn coerce
-  "Returns coerced entity or SchemaError if any coersion failed. Use error? to check result."
+  "Returns coerced entity or SchemaError if any coersion failed. Use error? to check result.
+  Use Case: 'I want to change my data into the types specified by the schema.'"
   [schema entity]
   (let [result (process-fields coerce-value (dissoc schema :*) entity)]
     (if (error? result)
@@ -464,7 +465,8 @@
       (coerce-whole-entity result schema entity))))
 
 (defn validate
-  "Returns entity with all values true, or SchemaError when one or more invalid fields. Use error? to check result."
+  "Returns entity with all values true, or SchemaError when one or more invalid fields. Use error? to check result.
+  Use Case: 'I want to make sure all the data is valid according to the schema.'"
   [schema entity]
   (let [result (process-fields validate-value! (dissoc schema :*) entity)]
     (if (error? result)
@@ -472,7 +474,10 @@
       (validate-whole-entity result schema entity))))
 
 (defn conform
-  "Returns coerced entity or SchemaError upon any coersion or validation failure. Use error? to check result."
+  "Returns coerced entity or SchemaError upon any coersion or validation failure. Use error? to check result.
+  Use Case: 'I want to coerce my data then validate the coerced data, all according to the schema.'
+  Use Case: Data comes in from a web-form so strings have to be coerced into numbers, etc., then
+            we need to validate that the data is good."
   [schema entity]
   (let [result (process-fields conform-value (dissoc schema :*) entity)]
     (if (error? result)
