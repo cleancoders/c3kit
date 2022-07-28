@@ -262,15 +262,17 @@
 (defmethod seq-where-clause '<= [attr [_ value]] (simple-where-fn attr value '<=))
 
 (defn- or-where-clause [attr values]
-  (if (seq values)
-    (list (cons 'or (mapcat #(where-clause attr %) values)))
-    [nil]))
+  (let [values (set values)]
+    (if (seq values)
+      (list (cons 'or (mapcat #(where-clause attr %) values)))
+      [nil])))
 
 (defmethod seq-where-clause 'or [attr values] (or-where-clause attr (rest values)))
 (defmethod seq-where-clause :default [attr values] (or-where-clause attr values))
 
 (defn where-clause [attr value]
   (cond (nil? value) (list [(list 'missing? '$ '?e attr)])
+        (set? value) (or-where-clause attr value)
         (sequential? value) (seq-where-clause attr value)
         :else (list ['?e attr value])))
 

@@ -98,7 +98,7 @@
 (defn ->inspect
   "Insert in threading macro to print the value."
   [v]
-  (println "v: " v)
+  (prn "->inspect: " v)
   v)
 
 (defn index-of

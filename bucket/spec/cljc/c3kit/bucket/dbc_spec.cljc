@@ -184,9 +184,11 @@
 
     (it "or"
       (let [b1 (db/tx :kind :bibelot :name "Bee" :color "red" :size 1)
-            b2 (db/tx :kind :bibelot :name "Bee" :color "blue" :size 2)
+            b2 (db/tx :kind :bibelot :name nil :color "blue" :size 2)
             b3 (db/tx :kind :bibelot :name "Ant" :color "blue" :size 1)]
-        (should= [b1 b2 b3] (db/find-by :bibelot :name ["Bee" "Ant"]))
+        (should= [b1 b3] (db/find-by :bibelot :name ["Bee" "Ant"]))
+        (should= [b1 b3] (db/find-by :bibelot :name #{"Bee" "Ant"}))
+        ;(should= [b1 b2 ] (db/find-by :bibelot :name ["Bee" nil]))
         (should= [b3] (db/find-by :bibelot :name ["BLAH" "Ant"]))
         (should= [] (db/find-by :bibelot :name ["BLAH" "ARG"]))
         (should= [] (db/find-by :bibelot :name []))

@@ -80,7 +80,9 @@
 (defn- eq-tester [v] (normal-tester = v))
 
 (defn kv->tester [[k v]]
-  (let [tester (if (sequential? v) (-tester v) (eq-tester v))]
+  (let [tester (cond (set? v) (or-tester v)
+                     (sequential? v) (-tester v)
+                     :else (eq-tester v))]
     (fn [e]
       (let [ev (get e k)]
         (tester ev)))))
