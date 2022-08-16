@@ -4,8 +4,8 @@
     [c3kit.apron.corec :as ccc]
     [c3kit.apron.log :as log]
     [c3kit.wire.api :as api]
-    [c3kit.wire.js :as cc]
     [c3kit.wire.flash :as flash]
+    [c3kit.wire.js :as cc]
     [cljs-http.client :as http]
     [cljs.core.async :as async]
     [reagent.core :as reagent]
@@ -35,8 +35,12 @@
         :else (handle-http-error response ajax-call)))
 
 (defn request-map [{:keys [options params method] :as ajax-call}]
-  (let [request {:headers {"X-CSRF-Token" (:anti-forgery-token @api/config)}}]
-    (if (:form-data? options)
+  (let [{:keys [form-data? headers]} options
+        ;; TODO - MDM: This is sloppy. Need away to allow any http-client options to pass through.
+        ;; TODO - MDM: We need a way to allow arbitrary authentication schemes to be applied here, not just CSRF.
+        headers (if-let [csrf (:anti-forgery-token @api/config)] (assoc headers "X-CSRF-Token" csrf) headers)
+        request {:headers headers}]
+    (if form-data?
       (let [form-data (js/FormData.)]
         (doseq [[k v] params]
           (.append form-data (name k) v))

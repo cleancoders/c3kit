@@ -13,7 +13,7 @@ Wire is a toolset for building rich-client web applications, clojure on the serv
  * __refresh.clj__ : dynamic code-reloading in development
  * __spec-helper(c).clj(c)(s)__ : help test client code
  * __verbose.clj__ : print request/response info in development
- * __websocket(c).clj(c)(s) : support for websocket comm between client and server
+ * __websocket(c).clj(c)(s)__ : support for websocket comm between client and server
  * __dragndrop.cljs__ : simple client side drag and drop
  * __js.cljs__ : common js fns and features
  * __util.cljs__ : misc utilities

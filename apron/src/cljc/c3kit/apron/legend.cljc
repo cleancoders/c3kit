@@ -15,7 +15,7 @@
 
 (defn for-kind [kind]
   (or (get index kind)
-      (throw (ex-info (str "Missing legend for kind: " kind) {:kind kind}))))
+      (throw (ex-info (str "Missing legend for kind: " (pr-str kind)) {:kind kind}))))
 
 (defn present! [entity]
   (when entity

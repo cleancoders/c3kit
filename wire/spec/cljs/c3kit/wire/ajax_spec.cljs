@@ -95,6 +95,13 @@
         (should= {:foo "bar"} (:form-params post))
         (should-not-contain :query-params post)))
 
+    (it "headers"
+      (let [req  (sut/request-map (sut/build-ajax-call "GET" ccc/noop "/some/url" {} ccc/noop [{:headers {"foo" "bar"}}]))]
+        (prn "gets: " req)
+        (should-contain "foo" (:headers req)))
+
+      )
+
     )
 
   (context "options"
