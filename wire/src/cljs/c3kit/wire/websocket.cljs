@@ -100,7 +100,7 @@
           [:div#-disconnected-menu.card
            [:h5.small-margin-bottom [:span.fas.fa-link] "Connection Broken"]
            ;[:p (pr-str @ws/channel-state)]
-           [:p.margin-bottom "Your connection with the Planning Poker server has been broken. "
+           [:p.margin-bottom "Your connection with the server has been broken. "
             "We are trying to reconnect.  If that doesn't seem to help, please try reloading this page."]
            [:button.primary {:on-click cc/page-reload!} "Reload Page"]]])])))
 
