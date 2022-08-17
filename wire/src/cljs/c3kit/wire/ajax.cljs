@@ -35,12 +35,11 @@
         :else (handle-http-error response ajax-call)))
 
 (defn request-map [{:keys [options params method] :as ajax-call}]
-  (let [{:keys [form-data? headers]} options
-        ;; TODO - MDM: This is sloppy. Need away to allow any http-client options to pass through.
+  (let [;; TODO - MDM: This is sloppy. Need away to allow any http-client options to pass through.
         ;; TODO - MDM: We need a way to allow arbitrary authentication schemes to be applied here, not just CSRF.
-        headers (if-let [csrf (:anti-forgery-token @api/config)] (assoc headers "X-CSRF-Token" csrf) headers)
-        request {:headers headers}]
-    (if form-data?
+        request (select-keys options [:headers :with-credentials?])
+        request (if-let [csrf (:anti-forgery-token @api/config)] (assoc-in request [:headers "X-CSRF-Token"] csrf) request)]
+    (if (:form-data? options)
       (let [form-data (js/FormData.)]
         (doseq [[k v] params]
           (.append form-data (name k) v))

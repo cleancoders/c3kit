@@ -97,10 +97,13 @@
 
     (it "headers"
       (let [req  (sut/request-map (sut/build-ajax-call "GET" ccc/noop "/some/url" {} ccc/noop [{:headers {"foo" "bar"}}]))]
-        (prn "gets: " req)
-        (should-contain "foo" (:headers req)))
+        (should-contain "foo" (:headers req))
+        (should= "bar" (get-in req [:headers "foo"]))))
 
-      )
+    (it "with-credentials?"
+      (let [req  (sut/request-map (sut/build-ajax-call "GET" ccc/noop "/some/url" {} ccc/noop [{:with-credentials? false}]))]
+        (should-contain :with-credentials? req)
+        (should= false (:with-credentials? req))))
 
     )
 
