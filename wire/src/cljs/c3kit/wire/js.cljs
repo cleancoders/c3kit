@@ -28,16 +28,16 @@
   [e]
   (.preventDefault e))
 
-(defn nix
-  "Nix an event: Stop what you're doing and get the hell out."
-  [e]
-  (.stopPropagation e)
-  (.preventDefault e))
-
 (defn nip
   "Nip the event in the bud, before it causes any trouble."
   [e]
   (.stopPropagation e))
+
+(defn nix
+  "Nix an event: Stop what you're doing and get the hell out."
+  [e]
+  (nip e)
+  (nod e))
 
 (defn ancestor-where [pred node]
   (cond
@@ -86,10 +86,24 @@
 (defn focus! [node] (when node (.focus node)))
 
 (defn nod-n-do
-  "Creates fn to ignore what ever browser even is created and do something else."
+  "Return function to suppress browser event with nod and call the supplied function with args."
   [a-fn & args]
   (fn [e]
     (nod e)
+    (apply a-fn args)))
+
+(defn nip-n-do
+  "Return function to suppress browser event with nip and call the supplied function with args."
+  [a-fn & args]
+  (fn [e]
+    (nip e)
+    (apply a-fn args)))
+
+(defn nix-n-do
+  "Return function to suppress browser event with nix and call the supplied function with args."
+  [a-fn & args]
+  (fn [e]
+    (nix e)
     (apply a-fn args)))
 
 
