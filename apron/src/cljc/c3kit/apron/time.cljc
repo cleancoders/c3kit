@@ -42,9 +42,7 @@
 
 (defn utc-offset
 	"The offset (milliseconds) between the local timezone and UTC. (AZ -> -7hrs)"
-	([]
-	 #?(:clj  (.getRawOffset (TimeZone/getDefault))
-			:cljs (utc-offset (now))))
+	([] (utc-offset (now)))
 	([date]
 	 #?(:clj  (.getOffset (TimeZone/getDefault) (.getTime date))
 			:cljs (* -1 (minutes (.getTimezoneOffset date))))))

@@ -4,11 +4,9 @@
             [java.text SimpleDateFormat]))
   (:require
     [c3kit.apron.time :as time :refer [now local before? after? between? year month day hour minute sec
-                                 parse unparse years months days hours minutes seconds before after
-                                 ago from-now formatter ->utc utc-offset utc millis-since-epoch]]
-    [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it xit should should= should-contain
-                                                      should-not-contain should-throw should-not-be-nil with
-                                                      should-not]]))
+                                       parse unparse years months days hours minutes seconds before after
+                                       ago from-now formatter ->utc utc-offset utc millis-since-epoch]]
+    [speclj.core #?(:clj :refer :cljs :refer-macros) [describe it should should= should-not]]))
 
 (describe "Time"
 
@@ -57,10 +55,15 @@
   ;  (should= (* -1 (-> 7 hours)) (utc-offset))
   ;  (should= (* -1 (-> 7 hours)) (utc-offset (now))))
 
-  (it "local vs utc"
+  (it "local vs utc after DST"
     (let [local-time (local 2020 1 1 1 1 1)
-          utc-time (utc 2020 1 1 1 1 1)]
-      (should= (utc-offset) (- (millis-since-epoch utc-time) (millis-since-epoch local-time)))))
+          utc-time   (utc 2020 1 1 1 1 1)]
+      (should= (utc-offset local-time) (- (millis-since-epoch utc-time) (millis-since-epoch local-time)))))
+
+  (it "local vs utc during DST"
+    (let [local-time (local 2020 6 1 1 1 1)
+          utc-time   (utc 2020 6 1 1 1 1)]
+      (should= (utc-offset local-time) (- (millis-since-epoch utc-time) (millis-since-epoch local-time)))))
 
   (it "before? and after?"
     (should= true (before? (local 2011 1 1) (local 2011 1 2)))
@@ -144,7 +147,7 @@
 
   (it "parses and formats dates in custom format object"
     (let [format (formatter "MMM d, yyyy HH:mm")
-          date (parse format "Nov 6, 1994 08:49")]
+          date   (parse format "Nov 6, 1994 08:49")]
       (should= "Nov 6, 1994 08:49" (unparse format date))))
 
   #?(:clj  (it "parses and formats dates in ISO 8601 format"
@@ -156,7 +159,7 @@
 
   (it "parses and formats :webform datas"
     (let [date (parse :webform "2020-03-31")
-          utc (time/->utc date)]
+          utc  (time/->utc date)]
       (should= 2020 (year utc))
       (should= 3 (month utc))
       (should= 31 (day utc))
@@ -168,7 +171,7 @@
   (it "time range"
     (let [time1 (time/local 1939 9 1)
           time2 (time/local 1945 9 2)
-          ww2 (time/bounds time1 time2)]
+          ww2   (time/bounds time1 time2)]
       (should (time/bounds? ww2))
       (should= time1 (time/start-of ww2))
       (should= time2 (time/end-of ww2))
