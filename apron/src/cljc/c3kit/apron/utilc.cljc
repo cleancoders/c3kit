@@ -100,11 +100,11 @@
     (str "\"" (str/replace value "\"" "\"\"") "\"")
     value))
 
-(defn- cell->csv [cell]
+(defn cell->csv [cell]
   (-> (str cell)
       csv-maybe-quote))
 
-(defn- row->csv [row]
+(defn row->csv [row]
   (str/join "," (map cell->csv row)))
 
 (defn ->csv
