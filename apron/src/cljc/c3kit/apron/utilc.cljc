@@ -2,15 +2,12 @@
   (:refer-clojure :exclude [format])
   #?(:clj (:import (java.util UUID)
                    (java.io ByteArrayInputStream ByteArrayOutputStream)))
-  (:require
-    #?(:clj [clojure.data.json :as json])
-    [c3kit.apron.corec :as corec]
-    [c3kit.apron.schema :as schema]
-    [clojure.edn :as edn]
-    [clojure.string :as str]
-    [clojure.walk :as walk]
-    [cognitect.transit :as transit]
-    ))
+  (:require #?(:clj [clojure.data.json :as json])
+            [c3kit.apron.schema :as schema]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [clojure.walk :as walk]
+            [cognitect.transit :as transit]))
 
 (defn ->edn
   "Convenience.  Convert the form to EDN"
@@ -44,25 +41,31 @@
 
 ; ----- Transit -----
 
-#?(:cljs (def transit-reader (transit/reader :json)))
+#?(:cljs (def transit-reader (transit/reader :json {:handlers {"f" js/parseFloat "n" js/parseInt}})))
 #?(:cljs (def transit-writer (transit/writer :json)))
 
 (defn ->transit
   "Convert data into transit string"
-  [data]
-  #?(:clj  (let [baos   (ByteArrayOutputStream.)
-                 writer (transit/writer baos :json)]
-             (transit/write writer data)
-             (.close baos)
-             (.toString baos))
-     :cljs (transit/write transit-writer data)))
+  ([type opts data]
+   #?(:clj  (let [baos   (ByteArrayOutputStream.)
+                  writer (transit/writer baos type opts)]
+              (transit/write writer data)
+              (.close baos)
+              (.toString baos))
+      :cljs (transit/write (transit/writer type opts) data)))
+  ([data]
+   #?(:clj  (->transit :json {} data)
+      :cljs (transit/write transit-writer data))))
 
 (defn <-transit
   "Convert transit string into data"
-  [^String transit-str]
-  #?(:clj  (with-open [in (ByteArrayInputStream. (.getBytes transit-str))]
-             (transit/read (transit/reader in :json)))
-     :cljs (transit/read transit-reader transit-str)))
+  ([type opts ^String transit-str]
+   #?(:clj  (with-open [in (ByteArrayInputStream. (.getBytes transit-str))]
+              (transit/read (transit/reader in type opts)))
+      :cljs (transit/read (transit/reader type opts) transit-str)))
+  ([^String transit-str]
+   #?(:clj  (<-transit :json {} transit-str)
+      :cljs (transit/read transit-reader transit-str))))
 
 ; ^^^^^ Transit ^^^^^
 

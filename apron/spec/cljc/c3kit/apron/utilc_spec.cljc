@@ -1,8 +1,8 @@
 (ns c3kit.apron.utilc-spec
-  (:require
-    [c3kit.apron.utilc :as sut]
-    [c3kit.apron.corec :as ccc]
-    [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it should= should-contain should-throw]]))
+  (:require [speclj.core #?(:clj :refer :cljs :refer-macros) [context describe it should= should-throw]]
+            [c3kit.apron.corec :as ccc]
+            [c3kit.apron.utilc :as sut]
+            [cognitect.transit :as transit]))
 
 (describe "Util common"
 
@@ -43,7 +43,36 @@
             data {:uuid uuid}
             trs  (sut/->transit data)]
         (should= data (sut/<-transit trs))))
-    )
+
+    (it "<-transit accepts optional types and parameters"
+      (let [handlers {"f" (transit/read-handler (fn [_] "hello"))}]
+        (should= "hello" (sut/<-transit :json {:handlers handlers} "[\"~#'\",\"~f-1.23\"]"))))
+
+    (it "->transit accepts optional types and parameters"
+      (let [handlers {#?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)
+                      (transit/write-handler
+                        (fn [_] "$")
+                        (fn [_] "abc"))}]
+        (should= (sut/->transit 'abc) (sut/->transit :json {:handlers handlers} 'im-being-ignored...))))
+
+    (it "BigDecimal"
+      (should= #?(:clj -1.23M :cljs -1.23) (sut/<-transit "[\"~#'\",\"~f-1.23\"]"))
+      (should= #?(:clj -1M :cljs -1) (sut/<-transit "[\"~#'\",\"~f-1\"]"))
+      (should= #?(:clj -0.00001M :cljs -0.00001) (sut/<-transit "[\"~#'\",\"~f-0.00001\"]"))
+      (should= #?(:clj 0M :cljs 0) (sut/<-transit "[\"~#'\",\"~f0\"]"))
+      (should= #?(:clj 0M :cljs 0) (sut/<-transit "[\"~#'\",\"~f0.0\"]"))
+      (should= #?(:clj 0.00001M :cljs 0.00001) (sut/<-transit "[\"~#'\",\"~f0.00001\"]"))
+      (should= #?(:clj 3M :cljs 3) (sut/<-transit "[\"~#'\",\"~f3\"]"))
+      (should= #?(:clj 3.14M :cljs 3.14) (sut/<-transit "[\"~#'\",\"~f3.14\"]"))
+      (should= {#?(:clj 3.14M :cljs 3.14) #?(:clj 0.15926M :cljs 0.15926)}
+               (sut/<-transit "[\"^ \",\"~f3.14\",\"~f0.15926\"]")))
+
+    (it "BigInt"
+      (should= #?(:clj -1N :cljs -1) (sut/<-transit "[\"~#'\",\"~n-1\"]"))
+      (should= #?(:clj 0N :cljs 0) (sut/<-transit "[\"~#'\",\"~n0\"]"))
+      (should= #?(:clj 5N :cljs 5) (sut/<-transit "[\"~#'\",\"~n5\"]"))
+      (should= {#?(:clj 3N :cljs 3) #?(:clj 7N :cljs 7)}
+               (sut/<-transit "[\"^ \",\"~n3\",\"~n7\"]"))))
 
   (context "json"
 
@@ -60,10 +89,10 @@
       (should= "\"\"" (sut/->json "")))
 
     (it "<-json"
-      (should= {"a"  123
-                "b"  "hello"
-                "c"  [1 2 3]
-                "d"  {"e" "f"}
+      (should= {"a" 123
+                "b" "hello"
+                "c" [1 2 3]
+                "d" {"e" "f"}
                 "g" 321}
                (sut/<-json "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}")))
 
@@ -72,10 +101,10 @@
       (should= nil (sut/<-json "")))
 
     (it "<-json: keyword keys"
-      (should= {:a  123
-                :b  "hello"
-                :c  [1 2 3]
-                :d  {:e "f"}
+      (should= {:a 123
+                :b "hello"
+                :c [1 2 3]
+                :d {:e "f"}
                 :g 321}
                (sut/<-json-kw "{\"a\":123,\"b\":\"hello\",\"c\":[1,2,3],\"d\":{\"e\":\"f\"},\"g\":321}")))
     )
