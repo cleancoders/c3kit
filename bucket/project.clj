@@ -1,4 +1,4 @@
-(defproject com.cleancoders.c3kit/bucket "1.0.19"
+(defproject com.cleancoders.c3kit/bucket "1.0.20"
 
   :description "Clean Coders Clojure (C3) Kit - Bucket: Database API for datomic and in-memory."
   :url "https://cleancoders.com"
@@ -13,7 +13,7 @@
 
   :profiles {:dev {:resource-paths ["dev"]
                    :dependencies   [
-                                    [com.cleancoders.c3kit/scaffold "1.0.9" :exclusions [[com.google.code.findbugs/jsr305]]]
+                                    [com.cleancoders.c3kit/scaffold "1.0.10" :exclusions [[com.google.code.findbugs/jsr305]]]
                                     [com.datomic/datomic-free "0.9.5697"]
                                     [com.google.guava/guava "25.1-jre" :exclusions [com.google.errorprone/error_prone_annotations]]
                                     [speclj "3.4.1"]
