@@ -4,7 +4,7 @@
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.8"]
+                 [com.cleancoders.c3kit/apron "1.0.9"]
                  [garden "1.3.10"]
                  [org.clojure/clojure "1.11.1"]
                  [org.clojure/clojurescript "1.10.764" :exclusions [org.clojure/tools.reader com.google.code.findbugs/jsr305]]

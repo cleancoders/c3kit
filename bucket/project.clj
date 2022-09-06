@@ -5,7 +5,7 @@
   :license {:name "MIT License" :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [
-                 [com.cleancoders.c3kit/apron "1.0.8"]
+                 [com.cleancoders.c3kit/apron "1.0.9"]
                  [cljsjs/hashids "1.0.2-0"]
                  [jstrutz/hashids "1.0.1"]
                  [org.clojure/clojure "1.11.1"]
