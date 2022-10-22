@@ -96,6 +96,7 @@
 	#?(:clj  (.before first second)
 		 :cljs (< (.getTime first) (.getTime second))))
 
+
 (defn after?
 	"Expects two Date as arguments. The function returns true if the
 	first date comes after the second date and returns false otherwise."
@@ -164,6 +165,11 @@
 	argument and a number of milliseconds to fast-forward time by."
 	[time & bits]
 	(reduce #(mod-time %1 %2 +) time bits))
+
+(def earlier? before?)
+(def later? after?)
+(def earlier before)
+(def later after)
 
 (defn ago
 	"Returns a Date some time (n) before now."

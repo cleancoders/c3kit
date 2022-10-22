@@ -5,7 +5,8 @@
   (:require
     [c3kit.apron.time :as time :refer [now local before? after? between? year month day hour minute sec
                                        parse unparse years months days hours minutes seconds before after
-                                       ago from-now formatter ->utc utc-offset utc millis-since-epoch]]
+                                       ago from-now formatter ->utc utc-offset utc millis-since-epoch
+                                       earlier? later? earlier later]]
     [speclj.core #?(:clj :refer :cljs :refer-macros) [describe it should should= should-not]]))
 
 (describe "Time"
@@ -116,6 +117,12 @@
     (should= false (after? (-> 1 months from-now) (-> 32 days from-now)))
     (should= true (before? (-> 1 months ago) (-> 27 days ago)))
     (should= false (before? (-> 1 months ago) (-> 32 days ago))))
+
+  (it "earlier later aliases"
+    (should= before? earlier?)
+    (should= after? later?)
+    (should= before earlier)
+    (should= after later))
 
   (it "rolling over a month with not enough days"
     (should= "20110228" (unparse :ymd (after (local 2011 1 31) (months 1)))))
