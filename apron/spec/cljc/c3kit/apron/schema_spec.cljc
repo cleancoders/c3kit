@@ -138,7 +138,7 @@
       (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp now))
       (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp (.getTime now)))
       (should-be-a #?(:clj java.sql.Timestamp :cljs js/Date) (schema/->timestamp now))
-      #?(:clj (should-be-a  java.sql.Timestamp (schema/->timestamp (java.sql.Date. (.getTime now)))))
+      #?(:clj (should-be-a java.sql.Timestamp (schema/->timestamp (java.sql.Date. (.getTime now)))))
       (should-throw schema/stdex (schema/->timestamp "now"))
       (should= #?(:clj (java.sql.Timestamp. (.getTime now)) :cljs now) (schema/->timestamp (pr-str now))))
 
@@ -486,6 +486,13 @@
     (it "multi field with nil value"
       (should= nil (schema/coerce-value {:type [:int]} nil)))
 
+    (it "multi field with empty list"
+      (should= () (schema/coerce-value {:type [:int]} ())))
+
+    (it "entity - with an empty seq value"
+      (let [result (schema/coerce pet {:colors []})]
+        (should= [] (:colors result))))
+
     )
 
   (context "conforming"
@@ -510,6 +517,9 @@
     (it "of sequentials"
       (should= [123 321 3] (schema/conform-value {:type [:int]} ["123.4" 321 3.1415])))
 
+    (it "of sequentials - empty"
+      (should= [] (schema/conform-value {:type [:int]} [])))
+
     (it "a valid entity"
       (let [result (schema/conform pet {:species  "dog"
                                         :birthday now
@@ -524,6 +534,17 @@
         (should= 24 (:teeth result))
         (should= "Fluffy" (:name result))
         (should= 12345 (:owner result))))
+
+    (it "entity - with an empty seq value"
+      (let [result (schema/conform pet {:species  "dog"
+                                        :birthday now
+                                        :length   "2.3"
+                                        :teeth    24.2
+                                        :name     "Fluff"
+                                        :owner    "12345"
+                                        :colors   []})]
+        (should= false (schema/error? result))
+        (should= [] (:colors result))))
 
     (it "of entity level operations"
       (let [spec    (assoc pet :* {:species {:type     :ignore
@@ -622,12 +643,18 @@
     (it "of sequentials"
       (should= [123 456] (schema/present-value {:type [:int]} [123 456])))
 
+    (it "of sequentials - empty"
+      (should= [] (schema/present-value {:type [:int]} [])))
+
+    (it "of sequentials - nil"
+      (should= nil (schema/present-value {:type [:int]} nil)))
+
     (it "of sequentials with customs"
       (should= ["123" "456"] (schema/present-value {:type [:int] :present str} [123 456]))
       (should= ["2" "3" "4" "5"] (schema/present-value {:type [:float] :present [inc str]} [1 2 3 4])))
 
     (it "of sequentials when omitted"
-      (should= nil (schema/present-value {:type [:int] :present schema/omit} [123 456])))
+      (should= [] (schema/present-value {:type [:int] :present schema/omit} [123 456])))
 
     (context "of entity"
 

@@ -267,7 +267,7 @@
 
 (defn -coerce-value! [coerce-fn value ?seq]
   (if ?seq
-    (seq (mapv #(coerce-fn %) (->seq value)))
+    (if (nil? value) nil (mapv #(coerce-fn %) (->seq value)))
     (coerce-fn value)))
 
 (defn- do-coersion [{:keys [type coerce message] :as spec} value]
@@ -392,7 +392,7 @@
    (let [presenters   (->vec (:present spec))
          presenter-fn (fn [v] (reduce #(%2 %1) v presenters))]
      (if (sequential? (:type spec))
-       (when-let [result (seq (filter identity (map presenter-fn value)))] (vec result))
+       (if (nil? value) nil (vec (remove nil? (map presenter-fn value))))
        (presenter-fn value)))))
 
 ; Entity Actions ------------------------------------------
