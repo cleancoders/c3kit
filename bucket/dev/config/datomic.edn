@@ -1,7 +1,0 @@
-{
- ;;:uri "datomic:free://localhost:4334/c3kit-bucket"
- :uri "datomic:mem://test"
- :migration-dir "resources/migrations"
- :migration-ns-prefix "migrations"
- :full-schema c3kit.bucket.migrate-spec/test-schema
- }
