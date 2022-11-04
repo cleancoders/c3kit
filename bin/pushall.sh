@@ -7,29 +7,31 @@ fi
 
 echo "Committing and pushing (to origin master) each library with commit message: $1"
 
-echo "Installing APRON ----------------"
+echo "Committing & Pushing APRON ----------------"
 pushd apron
 git commit -am "$1"
 git push origin master
 popd
 
-echo "Installing SCAFFOLD ----------------"
+echo "Committing & Pushing SCAFFOLD ----------------"
 pushd scaffold
 git commit -am "$1"
 git push origin master
 popd
 
-echo "Installing BUCKET ----------------"
+echo "Committing & Pushing BUCKET ----------------"
 pushd bucket
 git commit -am "$1"
 git push origin master
 popd
 
-echo "Installing WIRE ----------------"
+echo "Committing & Pushing WIRE ----------------"
 pushd wire
 git commit -am "$1"
 git push origin master
 popd
 
+
+echo "Committing & Pushing c3kit ----------------"
 git commit -am "$1"
 git push origin master
