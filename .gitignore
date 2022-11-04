@@ -1,8 +1,8 @@
 *.class
 *.iml
 *.jar
-.DS_Store
 .cpcache/
+.DS_Store
 .idea
 .lein-deps-sum
 .lein-failures

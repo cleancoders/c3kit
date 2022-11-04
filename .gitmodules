@@ -1,0 +1,12 @@
+[submodule "apron"]
+	path = apron
+	url = git@github.com:cleancoders/c3kit-apron.git
+[submodule "scaffold"]
+	path = scaffold
+	url = git@github.com:cleancoders/c3kit-scaffold.git
+[submodule "bucket"]
+	path = bucket
+	url = git@github.com:cleancoders/c3kit-bucket.git
+[submodule "wire"]
+	path = wire
+	url = git@github.com:cleancoders/c3kit-wire.git
