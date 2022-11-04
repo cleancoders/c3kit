@@ -1,0 +1,22 @@
+{
+ :paths   ["src/clj" "src/cljc"]
+ :deps    {
+           com.cleancoders.c3kit/apron {:mvn/version "1.0.10"}
+           cljsjs/hashids              {:mvn/version "1.0.2-0"}
+           jstrutz/hashids             {:mvn/version "1.0.1"}
+           org.clojure/clojure         {:mvn/version "1.11.1"}
+           }
+ :aliases {
+           :test {:extra-deps    {
+                                  com.cleancoders.c3kit/scaffold {:local/root "../scaffold" :exclusions [com.google.code.findbugs/jsr305]}
+                                  com.datomic/datomic-free       {:mvn/version "0.9.5697"}
+                                  com.google.guava/guava         {:mvn/version "25.1-jre" :exclusions [com.google.errorprone/error_prone_annotations]}
+                                  org.clojure/clojurescript      {:mvn/version "1.10.764"}
+                                  speclj/speclj                  {:mvn/version "3.4.1"}
+                                  }
+                  :override-deps {com.cleancoders.c3kit/apron {:local/root "../apron"}}
+                  :extra-paths   ["dev" "src/cljs" "spec/clj" "spec/cljc" "spec/cljs"]}
+           :spec {:main-opts ["-m" "speclj.main" "-c"]}
+           :cljs {:main-opts ["-m" "c3kit.scaffold.cljs"]}
+           }
+ }
