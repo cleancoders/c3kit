@@ -4,19 +4,19 @@
 
 ## [Apron](https://github.com/cleancoders/c3kit-apron) 
 
-[![Apron](https://github.com/cleancoders/c3kit/blob/main/img/apron_200.png)](https://github.com/cleancoders/c3kit-apron)
+[![Apron](https://github.com/cleancoders/c3kit/blob/master/img/apron_200.png?raw=true)](https://github.com/cleancoders/c3kit-apron)
 
 ## [Scaffold](https://github.com/cleancoders/c3kit-scaffold)
 
-[![Scaffold](https://github.com/cleancoders/c3kit/blob/main/img/scaffold_200.png)](https://github.com/cleancoders/c3kit-scaffold)
+[![Scaffold](https://github.com/cleancoders/c3kit/blob/master/img/scaffold_200.png?raw=true)](https://github.com/cleancoders/c3kit-scaffold)
 
 ## [Bucket](https://github.com/cleancoders/c3kit-bucket)
 
-[![Bucket](https://github.com/cleancoders/c3kit/blob/main/img/bucket_200.png)](https://github.com/cleancoders/c3kit-bucket)
+[![Bucket](https://github.com/cleancoders/c3kit/blob/master/img/bucket_200.png?raw=true)](https://github.com/cleancoders/c3kit-bucket)
 
 ## [Wire](https://github.com/cleancoders/c3kit-wire)
 
-[![Wire](https://github.com/cleancoders/c3kit/blob/main/img/wire_200.png)](https://github.com/cleancoders/c3kit-wire)
+[![Wire](https://github.com/cleancoders/c3kit/blob/master/img/wire_200.png?raw=true)](https://github.com/cleancoders/c3kit-wire)
 
 # Development
 
