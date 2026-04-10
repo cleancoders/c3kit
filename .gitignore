@@ -2,6 +2,7 @@
 *.iml
 *.jar
 .cpcache/
+.toolbox/
 .DS_Store
 .idea
 .lein-deps-sum
