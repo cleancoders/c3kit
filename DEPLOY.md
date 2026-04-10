@@ -89,17 +89,38 @@ Open `CHANGES.md`. The top heading must be `### <new-version>` — not
 release should be listed under that heading. If the CHANGES header is missing
 or stale, fix it before proceeding.
 
-### 5. Dry-run the jar build
+### 5. Install locally and smoke-test in a downstream project
 
 ```bash
-clj -T:build clean
-clj -T:build jar
+clj -T:build install
 ```
 
-This produces `target/<lib-name>-<version>.jar` without tagging or publishing
-anything. If this fails, `deploy` will fail the same way — debug here where
-nothing has side effects yet. A successful run leaves a jar in `target/` that
-you can inspect (`jar tf target/<lib>-<version>.jar`) before releasing.
+`install` chains `clean` → `pom` → `jar` → `aether/install`, producing
+`target/<lib-name>-<version>.jar` **and** placing it at
+`~/.m2/repository/com/cleancoders/c3kit/<lib-name>/<version>/` where other
+local projects can resolve it as a maven dependency.
+
+**Then smoke-test it from a consuming project.** Pick a real downstream
+project (another c3kit module, an application, etc.), pin the new version
+in its `deps.edn`, and run its test suite:
+
+```clojure
+;; in the consumer's deps.edn
+com.cleancoders.c3kit/<lib-name> {:mvn/version "<new-version>"}
+```
+
+```bash
+cd ../consumer-project
+clj -M:test:spec
+```
+
+This is the real pre-deploy check. Clojars releases are **immutable** — once
+you push a version, you can't re-cut it, only bump to the next patch. Don't
+skip this step just because tests pass inside the library itself; cross-
+project resolution and compilation are their own surface area.
+
+A `jar`-only build (without `install`) is not a sufficient smoke test —
+`target/` is invisible to maven resolvers in other projects.
 
 ### 6. Clojars credentials are set
 
