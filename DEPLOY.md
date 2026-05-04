@@ -239,12 +239,9 @@ The simpler path for this situation is usually to bump the patch version
 (`2.5.1` → `2.5.2`), re-commit, and run `deploy` fresh — Clojars versions
 are immutable, so the half-released version is just a tag with no jar.
 
-## Deprecated: `bin/tagall.sh`
+## Tagging
 
-The `bin/tagall.sh` script in the meta-repo is **stale** and should not be
-used. It reads a root-level `VERSION` file that no longer exists (commit
-`b25bfa1 removes VERSION`) and assumes a single synchronized version across
-all submodules, which hasn't been the case for a long time. Tagging is
-handled per-module by `build.clj`'s `tag` task, invoked as part of
-`clj -T:build deploy`. If you find yourself reaching for `tagall.sh`, use
-`deploy` instead.
+There is no cross-module tagging script. Each library tags its own commits as
+part of `clj -T:build deploy` — the build's `tag` task creates and pushes the
+git tag, the `jar` task builds the artifact, and `aether/deploy` uploads it.
+Submodule versions drift independently by design.

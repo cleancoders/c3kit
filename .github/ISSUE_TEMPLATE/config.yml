@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug or feature in apron, bucket, wire, or scaffold
+    url: https://github.com/cleancoders/c3kit#contributing
+    about: This meta-repo only handles cross-module concerns. Library-specific issues belong in the library's own repo — pick the right one from the c3kit README.
+  - name: Security vulnerability
+    url: https://github.com/cleancoders/c3kit/blob/master/SECURITY.md
+    about: Please report security issues privately. Do not open a public issue.

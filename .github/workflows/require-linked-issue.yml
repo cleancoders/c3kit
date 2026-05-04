@@ -1,0 +1,50 @@
+name: Require linked issue
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: >-
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+      && !endsWith(github.actor, '[bot]')
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            // Matches: Closes #1, Fixes owner/repo#1, Resolves https://github.com/owner/repo/issues/1
+            const pattern = /\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+(#\d+|[\w.-]+\/[\w.-]+#\d+|https?:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/\d+)/i;
+            if (pattern.test(body)) {
+              core.info('Linked issue found in PR body.');
+              return;
+            }
+            const contributingUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/blob/master/CONTRIBUTING.md`;
+            const message = [
+              "Hi, and thanks for the contribution!",
+              "",
+              `This PR doesn't appear to be linked to an open issue. Per [CONTRIBUTING.md](${contributingUrl}), all pull requests to this repo must close an issue that's already been acknowledged by a maintainer.`,
+              "",
+              "Please open an issue describing the change you'd like to make, wait for a thumbs-up from a maintainer, then submit a new PR with `Closes #N` in the description.",
+              "",
+              "Auto-closing this PR — no hard feelings, just keeping the queue manageable."
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: message,
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              state: 'closed',
+            });

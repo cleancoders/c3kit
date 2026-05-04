@@ -38,9 +38,7 @@ c3kit/
 ├── bucket/     ← git submodule — cleancoders/c3kit-bucket (datastore abstraction)
 ├── wire/       ← git submodule — cleancoders/c3kit-wire   (HTTP / transport)
 ├── scaffold/   ← git submodule — cleancoders/c3kit-scaffold (build / cljs / css tooling)
-├── config/     ← config loading (local, not yet a submodule on disk)
 ├── bin/        ← shell helpers that fan operations across every submodule
-├── deps.edn    ← tiny shell for the meta-repo itself; almost nothing lives here
 └── README.md
 ```
 
@@ -74,7 +72,6 @@ records the new submodule SHA as its own commit.
 | `bucket`   | Datastore abstraction (Datomic, JDBC, H2, SQLite, Postgres, MSSQL) | `src/clj`, `src/cljc`, `src/cljs` | JVM + cljs    |
 | `wire`     | HTTP/transport (ring, http-kit, cljs-http, Redis streams, JWT, anti-forgery) | `src/clj`, `src/cljc`, `src/cljs` | JVM + cljs    |
 | `scaffold` | Build tooling (cljs compiler wrapper, CSS via garden, Playwright) | `src/`             | JVM           |
-| `config`   | Config loading                             | `src/`             | cljc          |
 
 **Bucket has its own `AGENTS.md`** at `bucket/AGENTS.md` — read it before doing
 work in that module. It uses `bd` (beads) for issue tracking and has a
@@ -146,23 +143,22 @@ immediately.
 - **Versioning:** each module has its own `VERSION` file and its own
   `CHANGES.md`. Bumping a version is a commit in that submodule; the parent
   meta-repo then records the new SHA.
-- **No file bloat at the root.** The root `src/` and `spec/` directories exist
-  but are essentially empty scaffolds. All real code belongs in a module.
+- **No code lives at the root.** All real code belongs in a submodule.
 
 ## bin/ Scripts
 
-Fan operations across every submodule listed in `bin/c3kit.env` (currently
-`apron scaffold bucket wire config`):
+Fan operations across every submodule listed in `bin/c3kit.env`
+(`apron scaffold bucket wire`):
 
 | Script              | What it does                                            |
 |---------------------|---------------------------------------------------------|
 | `bin/cloneall.sh`   | Clone every submodule fresh                             |
 | `bin/pullall.sh`    | `git pull` inside every submodule                       |
-| `bin/pushall.sh`    | `git push` from every submodule                         |
+| `bin/pushall.sh`    | `git commit -am "$1"` and `git push` in every submodule, then the meta-repo |
 | `bin/testall.sh`    | Run `:test:spec` and `:test:cljs once` in every module  |
-| `bin/tagall.sh`     | **Deprecated** — reads a root `VERSION` that no longer exists. See Releases below. |
 
-All scripts `source bin/c3kit.env` and run with `set -ex`.
+All scripts `source bin/c3kit.env` and run with `set -ex`. Tagging /
+releasing is per-module via `clj -T:build deploy` — see [`DEPLOY.md`](DEPLOY.md).
 
 ## Releases
 
