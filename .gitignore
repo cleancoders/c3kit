@@ -21,3 +21,4 @@ pom.xml
 pom.xml.asc
 /config
 /mosaic
+.env
