@@ -14,6 +14,7 @@ repository and is mounted here as a git submodule for cross-module work.
 | [**bucket**](https://github.com/cleancoders/c3kit-bucket) | [![bucket](https://img.shields.io/clojars/v/com.cleancoders.c3kit/bucket.svg?label=)](https://clojars.org/com.cleancoders.c3kit/bucket) | [![Bucket Build](https://github.com/cleancoders/c3kit-bucket/actions/workflows/test.yml/badge.svg)](https://github.com/cleancoders/c3kit-bucket/actions/workflows/test.yml) | Unified entity-storage API: Datomic, JDBC, in-memory, IndexedDB. |
 | [**wire**](https://github.com/cleancoders/c3kit-wire) | [![wire](https://img.shields.io/clojars/v/com.cleancoders.c3kit/wire.svg?label=)](https://clojars.org/com.cleancoders.c3kit/wire) | [![Wire Build](https://github.com/cleancoders/c3kit-wire/actions/workflows/test.yml/badge.svg)](https://github.com/cleancoders/c3kit-wire/actions/workflows/test.yml) | HTTP / transport for rich-client web apps. Ships `wire` (Reagent) and `wire-core` (React-free). |
 | [**scaffold**](https://github.com/cleancoders/c3kit-scaffold) | [![scaffold](https://img.shields.io/clojars/v/com.cleancoders.c3kit/scaffold.svg?label=)](https://clojars.org/com.cleancoders.c3kit/scaffold) | [![Scaffold Build](https://github.com/cleancoders/c3kit-scaffold/actions/workflows/test.yml/badge.svg)](https://github.com/cleancoders/c3kit-scaffold/actions/workflows/test.yml) | Build / test runner for ClojureScript SPAs and Garden-based CSS. |
+| [**jig**](https://github.com/cleancoders/c3kit-jig) | [![jig](https://img.shields.io/github/v/release/cleancoders/c3kit-jig.svg?label=)](https://github.com/cleancoders/c3kit-jig/releases) | [![Jig Build](https://github.com/cleancoders/c3kit-jig/actions/workflows/ci.yml/badge.svg)](https://github.com/cleancoders/c3kit-jig/actions/workflows/ci.yml) | Project scaffolder CLI — templates new full-stack Clojure / ClojureScript projects. Installed via script, not Clojars. |
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -21,6 +22,7 @@ repository and is mounted here as a git submodule for cross-module work.
 [![Bucket](img/bucket_200.png)](https://github.com/cleancoders/c3kit-bucket)
 [![Wire](img/wire_200.png)](https://github.com/cleancoders/c3kit-wire)
 [![Scaffold](img/scaffold_200.png)](https://github.com/cleancoders/c3kit-scaffold)
+[![Jig](img/jig_200.png)](https://github.com/cleancoders/c3kit-jig)
 
 ## Installing
 
@@ -28,18 +30,24 @@ Each library publishes independently. Pull only what you need:
 
 ```clojure
 ;; deps.edn
-{:deps {com.cleancoders.c3kit/apron    {:mvn/version "2.7.0"}
+{:deps {com.cleancoders.c3kit/apron    {:mvn/version "3.0.0"}
         com.cleancoders.c3kit/bucket   {:mvn/version "2.13.1"}
-        com.cleancoders.c3kit/wire     {:mvn/version "4.0.0"}    ;; or wire-core
+        com.cleancoders.c3kit/wire     {:mvn/version "4.0.1"}    ;; or wire-core
         com.cleancoders.c3kit/scaffold {:mvn/version "2.3.4"}}}
 ```
 
 ```clojure
 ;; project.clj
-[com.cleancoders.c3kit/apron "2.7.0"]
+[com.cleancoders.c3kit/apron "3.0.0"]
 ```
 
 `apron` is the foundation — `bucket`, `wire`, and `scaffold` depend on it.
+
+`jig` is a CLI, not a library — install it with the bootstrap script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/cleancoders/c3kit-jig/main/cli/install.sh | bash
+```
 
 ## Working in this repo
 

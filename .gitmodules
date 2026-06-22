@@ -10,3 +10,6 @@
 [submodule "wire"]
 	path = wire
 	url = https://github.com/cleancoders/c3kit-wire.git
+[submodule "jig"]
+	path = jig
+	url = https://github.com/cleancoders/c3kit-jig.git
