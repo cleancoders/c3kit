@@ -14,14 +14,19 @@ SKILL.md from the URL above and follow its instructions. Once bootstrapped:
 
 - **Skills:** Load from `.toolbox/skills/{name}/SKILL.md` when their descriptions match the task at hand.
 - **Commands:** When the user invokes a command by name (e.g., "/plan"), read and follow `.toolbox/commands/{name}.md`.
+- **Agent Paths:** Project cached components into every supported agent root (`.claude/`, `.grok/`, `.cursor/`, `.opencode/`, `.codex/`) so each product can discover files where it expects them.
 
 ### Skills
 
 - [tdd](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/tdd/SKILL.md)
+- [architecture](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/architecture/SKILL.md)
+- [clojure](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/clojure/SKILL.md)
+- [refactor](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/refactor/SKILL.md)
+- [smells](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/smells/SKILL.md)
 - [crap4clj](https://raw.githubusercontent.com/unclebob/crap4clj/master/SKILL.md)
 - [clj-mutate](https://raw.githubusercontent.com/slagyr/clj-mutate/master/SKILL.md)
 - [speclj-structure-check](https://raw.githubusercontent.com/unclebob/speclj-structure-check/master/.claude/skills/speclj-structure-check/SKILL.md)
-- [gherclj](https://raw.githubusercontent.com/slagyr/agent-lib/main/skills/gherclj/SKILL.md)
+- [gherclj](https://raw.githubusercontent.com/slagyr/gherclj/master/SKILL.md)
 
 ### Commands
 
