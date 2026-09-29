@@ -13,152 +13,92 @@ All artifacts publish to Clojars under the `com.cleancoders.c3kit` group:
 | wire     | `com.cleancoders.c3kit/wire`                                 |
 | scaffold | `com.cleancoders.c3kit/scaffold`                             |
 
-A release is invoked from **inside** the target submodule by running
-`clj -T:build deploy`. Everything below describes how to make sure that
-command is going to do the right thing.
+**Releases run in CI, not on your machine.** Each library's `Release`
+workflow (`.github/workflows/release.yml`) builds, publishes, verifies and
+tags. `clj -T:build deploy` refuses to run outside GitHub Actions ("runs in
+CI only"). The release logic lives in the shared build library
+[`cleancoders/github-actions`](https://github.com/cleancoders/github-actions),
+pinned by each library's `:build` alias; its
+[releasing guide](https://github.com/cleancoders/github-actions/blob/master/docs/releasing.md)
+is the full reference.
 
 ## Prerequisites (one-time setup)
 
-1. **Clojars group membership.** You must be a member of the
-   `com.cleancoders.c3kit` group. Non-members cannot push.
-2. **Clojars deploy token.** Generate at https://clojars.org/tokens with
-   scope `com.cleancoders.c3kit/*`. Store the token value — you can't view
-   it again later.
-3. **Environment variables.** In your shell (or `.envrc`):
-
-   ```bash
-   export CLOJARS_USERNAME="your-clojars-username"
-   export CLOJARS_PASSWORD="your-deploy-token"   # NOT your login password
-   ```
-
-4. **Tooling.** `clojure` CLI (tools.build is pulled in via the
-   submodule's `:build` alias) and `git` on PATH.
+1. **Clojars credentials live in the repo's `clojars` environment**
+   (Settings → Environments → `clojars`), as the `CLOJARS_USERNAME` and
+   `CLOJARS_PASSWORD` secrets. The password is a deploy token from
+   https://clojars.org/tokens scoped to `com.cleancoders.c3kit/*`, owned by a
+   member of the `com.cleancoders.c3kit` group. Nobody needs them in a local
+   shell.
+2. **The `clojars` environment gates the release.** Its required reviewers
+   approve each run, and its deployment-branch policy limits it to `master`.
+3. **Tooling:** `gh` (authenticated, with write access to the repo), plus the
+   `clojure` CLI and `bb` for the local checks below.
 
 ## Pre-flight checklist
 
-Run every step **from inside the target submodule** (`cd apron`, `cd bucket`,
-etc.). Do not skip. `clj -T:build deploy` will happily push a broken or
-half-staged release if you let it.
+Run from **inside the target submodule** (`cd apron`, `cd bucket`, etc.).
 
-### 1. Working tree is clean
+### 1. Everything is on origin master
 
 ```bash
-git status --short
-```
-
-Expected: no output. If anything shows, commit or stash it first. The build's
-`tag` task aborts on non-empty `git diff`, but that check only sees unstaged
-modifications — staged-but-uncommitted changes slip past it and end up
-*outside* the tagged commit. Don't rely on the safety net; start clean.
-
-### 2. Local master matches origin master
-
-```bash
+git status --short                                 # no output
 git fetch origin
-git log origin/master..HEAD    # must be empty
-git log HEAD..origin/master    # must be empty
+git log origin/master..HEAD; git log HEAD..origin/master   # both empty
 ```
 
-If you have unpushed commits, `git push origin master` first. If origin is
-ahead, `git pull --rebase origin master`. The tag must point at a commit that
-already lives on origin, otherwise `git push --tags` succeeds locally but
-downstream consumers can't fetch the tagged commit.
+The release builds whatever `master` points at on GitHub, so unpushed local
+work is not in it.
 
-### 3. `VERSION` is bumped
+### 2. `VERSION` is bumped and `CHANGES.md` matches
 
 ```bash
-cat VERSION
+cat resources/c3kit/<lib-name>/VERSION   # apron's path; check each lib's
+head -1 CHANGES.md                       # must be "### <that version>"
 ```
 
-Compare against what's already published on Clojars:
+The version must not already be tagged or published: Clojars versions are
+immutable, and the workflow refuses a version that is already tagged. Use
+semver: **patch** for fixes, **minor** for backward-compatible additions,
+**major** for breaking changes.
 
-    https://clojars.org/com.cleancoders.c3kit/<lib-name>/versions
-
-If the local `VERSION` is the same as (or older than) the published version,
-bump it. Use semver:
- * **patch** (`2.5.0` → `2.5.1`) — bug fix, no API changes
- * **minor** (`2.5.0` → `2.6.0`) — backward-compatible feature additions
- * **major** (`2.5.0` → `3.0.0`) — breaking changes
-
-Commit the bump as part of the release commit, not separately.
-
-### 4. `CHANGES.md` top entry matches `VERSION`
-
-Open `CHANGES.md`. The top heading must be `### <new-version>` — not
-`### Unreleased`, not a stale previous version. Every change shipping in this
-release should be listed under that heading. If the CHANGES header is missing
-or stale, fix it before proceeding.
-
-### 5. Install locally and smoke-test in a downstream project
+### 3. Optional: smoke-test in a downstream project
 
 ```bash
-clj -T:build install
+clj -T:build install        # builds the jar into ~/.m2
 ```
 
-`install` chains `clean` → `pom` → `jar` → `aether/install`, producing
-`target/<lib-name>-<version>.jar` **and** placing it at
-`~/.m2/repository/com/cleancoders/c3kit/<lib-name>/<version>/` where other
-local projects can resolve it as a maven dependency.
+Then pin `{:mvn/version "<new-version>"}` in a real consumer's `deps.edn` and
+run its suite. Local build tasks (`jar`, `install`) work; only `deploy` is
+CI-only.
 
-**Then smoke-test it from a consuming project.** Pick a real downstream
-project (another c3kit module, an application, etc.), pin the new version
-in its `deps.edn`, and run its test suite:
-
-```clojure
-;; in the consumer's deps.edn
-com.cleancoders.c3kit/<lib-name> {:mvn/version "<new-version>"}
-```
+### 4. CI is green on master's head
 
 ```bash
-cd ../consumer-project
-clj -M:test:spec
+gh run list --repo cleancoders/c3kit-<lib-name> --branch master --limit 3
 ```
 
-This is the real pre-deploy check. Clojars releases are **immutable** — once
-you push a version, you can't re-cut it, only bump to the next patch. Don't
-skip this step just because tests pass inside the library itself; cross-
-project resolution and compilation are their own surface area.
-
-A `jar`-only build (without `install`) is not a sufficient smoke test —
-`target/` is invisible to maven resolvers in other projects.
-
-### 6. Clojars credentials are set
-
-```bash
-[ -n "$CLOJARS_USERNAME" ] && [ -n "$CLOJARS_PASSWORD" ] && echo "OK"
-```
-
-Should print `OK`. If not, see Prerequisites above.
-
-### 7. Tests are green
-
-Run the full test suite one last time on the commit you're about to tag:
-
-```bash
-clj -M:test:spec
-bb spec                 # apron only — verifies bb compatibility
-clj -M:test:cljs once   # modules with cljs
-```
-
-Don't deploy red. CI caught what it could on the PR, but the release commit
-deserves a local green check too.
+The workflow checks this itself and refuses to release a commit whose CI did
+not pass, so wait for the push's CI run to finish green.
 
 ## Release command
 
 ```bash
-clj -T:build deploy
+gh workflow run release.yml --repo cleancoders/c3kit-<lib-name> --ref master
+gh run watch --repo cleancoders/c3kit-<lib-name> \
+  $(gh run list --repo cleancoders/c3kit-<lib-name> --workflow release.yml \
+      --limit 1 --json databaseId -q '.[0].databaseId')
 ```
 
-That's it. This single command:
+Approve the `clojars` deployment when GitHub asks (in the run's page, or the
+Actions tab). The same thing from the browser: Actions → **Release** → **Run
+workflow** on `master`.
 
-1. **`tag`** — verifies clean tree, checks the tag doesn't already exist,
-   `git tag $VERSION`, `git push --tags`
-2. **`jar`** — cleans `target/`, writes `pom.xml`, builds the jar
-3. **`aether/deploy`** — uploads the jar and pom to Clojars
-
-If any step fails, subsequent steps don't run. A failed `tag` leaves no
-artifacts; a failed `jar` leaves no upload; a failed upload leaves a local jar
-and a pushed tag — which is recoverable but annoying (see Troubleshooting).
+The job, in order: verifies CI succeeded for that exact commit, refuses a
+version that is already tagged, builds the jar, publishes the jar and pom to
+Clojars, re-fetches the jar from Clojars and compares digests, records the
+digests in the job summary, and only then pushes the version tag. Later steps
+attest build provenance and the SBOM on GitHub. A failed publish leaves no tag.
 
 ## After a successful release
 
@@ -171,13 +111,14 @@ and a pushed tag — which is recoverable but annoying (see Troubleshooting).
 
    ```bash
    cd ..                          # back to c3kit root
-   git add apron                  # stages the new submodule SHA
-   git commit -m "bump apron to <version>"
+   git -C <lib-name> pull --ff-only   # the submodule at the released commit
+   git add <lib-name>             # stages the new submodule SHA
+   git commit -m "bump <lib-name> to <version>"
    git push
    ```
 
-3. **Announce / update downstream.** If this release fixes a bug or adds an
-   API someone is waiting on, let them know.
+3. **Close linked issues and announce.** If this release fixes a bug or adds
+   an API someone is waiting on, let them know.
 
 ## Module-specific notes
 
@@ -208,40 +149,47 @@ identical to the others.
 
 ## Troubleshooting
 
-**`tag` aborts with "commit master before tagging".**
-Working tree is dirty. `git status`, clean it up, retry.
+Read the failed run's log: `gh run view <run-id> --repo cleancoders/c3kit-<lib-name> --log-failed`.
 
-**`tag` says "tag already exists".**
-You already tagged this `VERSION` locally. Either bump `VERSION` or delete the
-local tag (`git tag -d $VERSION`) if it's stale — but *never* delete a tag
-that's already been pushed to origin.
+**"CI is not green for <sha>".**
+The commit's CI run failed or hasn't finished. Fix or wait, then rerun.
 
-**`aether/deploy` fails with 401.**
-`CLOJARS_PASSWORD` is wrong or expired. Regenerate the token on
-https://clojars.org/tokens and re-export.
+**"already tagged".**
+That `VERSION` was released before. Bump `VERSION` and `CHANGES.md`, push,
+wait for CI, rerun.
 
-**`aether/deploy` fails with 403.**
-You're not a member of the `com.cleancoders.c3kit` group. Ask a current
-member to add you.
+**Clojars 401.**
+The `CLOJARS_PASSWORD` secret in the `clojars` environment is wrong or
+expired. Regenerate the token on https://clojars.org/tokens and update the
+secret.
 
-**`aether/deploy` fails after `tag` succeeded (tag is pushed, jar isn't
-uploaded).**
-The tag is fine — it points at the right commit. Fix whatever broke the
-upload, then re-run just the upload:
+**Clojars 403 "Non-SNAPSHOT redeploy".**
+Either the version is already on Clojars (bump it), or the build uploaded the
+same file twice in one deploy. The latter was a build-library bug fixed in
+`cleancoders/github-actions` c910fe3; make sure the lib's `:build` pin is at
+or after it.
 
-```bash
-clj -T:build jar    # rebuild (jar may or may not exist in target/)
-clj -T:build install  # optional: verify locally
-# then call aether/deploy directly via a REPL, OR bump VERSION + redeploy
-```
+**Clojars 400 on an artifact.**
+Clojars only accepts `.pom`, `.jar`, `.asc`, `.sha1`, `.md5`, `.module` and
+`.sig` uploads. Anything else in the upload set (e.g. a `.json` SBOM) is
+rejected; the build library stopped uploading the SBOM in c910fe3.
 
-The simpler path for this situation is usually to bump the patch version
-(`2.5.1` → `2.5.2`), re-commit, and run `deploy` fresh — Clojars versions
-are immutable, so the half-released version is just a tag with no jar.
+**The publish failed.**
+No tag is pushed and nothing is released, unless the log shows the jar was
+accepted. Fix the cause and rerun the workflow with the same version. If the
+jar did land but verification failed, see the build library's
+[verifying a release](https://github.com/cleancoders/github-actions/blob/master/docs/verifying-a-release.md)
+guide before doing anything else.
+
+**Break glass.**
+If the workflow itself is broken and a release can't wait, the build
+library's `clj -T:build emergency-publish` publishes from a machine, gated by
+the `EMERGENCY_RELEASE` variable naming the exact version. Read the
+[releasing guide](https://github.com/cleancoders/github-actions/blob/master/docs/releasing.md)
+first: it skips the CI check, and every use is recorded.
 
 ## Tagging
 
-There is no cross-module tagging script. Each library tags its own commits as
-part of `clj -T:build deploy` — the build's `tag` task creates and pushes the
-git tag, the `jar` task builds the artifact, and `aether/deploy` uploads it.
-Submodule versions drift independently by design.
+Tags are created by the Release workflow, after the artifact is published and
+verified. Don't tag by hand. Each library tags its own commits, and submodule
+versions drift independently by design.
